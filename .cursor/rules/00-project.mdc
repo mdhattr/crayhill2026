@@ -1,0 +1,143 @@
+---
+description: Project overview, stack, and global conventions for the Crayhill rebrand
+alwaysApply: true
+---
+
+# Crayhill Rebrand — Project Rules
+
+## What this project is
+A rebuild of **crayhill.com**, the public website for **Crayhill Capital Management** — an SEC-registered, ~$3B asset-based finance firm. The audience is institutional (pension plans, insurance companies, foundations, counterparties, prospective hires). The tone of every artifact (copy, UI, motion, code) should match: **serious, precise, trustworthy, understated**. No playful microcopy, no consumer-app flourishes.
+
+- ~18 pages, content-heavy with some interactive elements.
+- This is a marketing site, not a product. No login, no dashboards (yet).
+
+## Architecture
+```
+React SPA (frontend, this repo)
+        ↓  HTTPS / JSON
+PHP API layer (/api, this repo)
+        ↓  PDO, prepared statements
+MariaDB (AWS RDS)
+```
+
+- The React app is a **single-page app** that consumes a PHP REST API. PHP never renders HTML for end users — it only serves JSON.
+- API is versioned: all endpoints live under `/api/v1/...`.
+- Frontend and API are deployed together but kept in separate top-level directories.
+
+### Boundaries (do not cross)
+Treat the layer boundaries as load-bearing — most bugs in stacks like this come from leaks across them.
+- Never import PHP code or database logic into the React app.
+- Never embed SQL strings, schemas, or DB column names in the frontend.
+- Never put secrets, DB credentials, or RDS connection strings anywhere under `frontend/`. They live in `api/.env` (gitignored).
+- The React app talks to the backend **only** through the typed API client in `frontend/src/api/`. No `fetch()` or `axios` calls scattered through pages or components.
+- The API never returns raw DB rows. Always shape the response into the documented contract.
+- Treat the API as a hard contract: the frontend trusts the API as source of truth; the API trusts the DB as source of truth.
+
+## Repo layout (target)
+```
+/                          # repo root
+├── .cursor/rules/         # these rules
+├── .config/               # SECRETS — gitignored. See "Secrets & configuration" below.
+│   ├── secrets.env        # real values (gitignored)
+│   ├── secrets.env.example  # committed template
+│   └── README.md          # how the .config/ convention works
+├── .gitignore
+├── INSTALL.md             # living install + EC2 deploy runbook (see 50-living-docs.mdc)
+├── README.md              # short project intro (created once there's something to introduce)
+├── assets/                # COMMITTED — production brand assets (logos, icons, images).
+│   ├── crayhill-r-logo-svg/   # Vite's publicDir; no docs files in here — they'd
+│   ├── icons/                 # ship to production. See INSTALL.md → Static assets.
+│   └── images/                # All folder/file names are kebab-case (URL-clean).
+├── docs/
+│   ├── data-flow.md       # living data flow doc (see 50-living-docs.mdc)
+│   └── Crayhill Web Assets/  # designer SOURCE files (page mockups, .psd/.ai/.fig — NOT shipped)
+├── frontend/              # React + Vite + TypeScript app
+│   ├── src/
+│   │   ├── pages/         # one folder per route (~18 pages)
+│   │   ├── components/    # shared UI components
+│   │   ├── sections/      # larger page-specific composites (Hero, ContactBlock, etc.)
+│   │   ├── hooks/
+│   │   ├── api/           # typed API client + TanStack Query hooks
+│   │   ├── lib/           # pure utilities
+│   │   ├── styles/        # tailwind.css, design tokens
+│   │   └── data/          # hardcoded content (interim; migrates to API/DB over time)
+│   ├── public/            # frontend-only static (currently empty; assets/ is the publicDir)
+│   ├── .env.example       # public Vite vars only (e.g. VITE_API_BASE_URL) — NO secrets
+│   └── package.json
+└── api/                   # PHP API
+    ├── v1/                # versioned endpoints
+    ├── lib/               # shared PHP (db, response, validation, env loader)
+    └── migrations/        # numbered, dated SQL migrations
+```
+
+The project deploys to a single **AWS EC2 instance** (with MariaDB on RDS). Every install/deploy step lives in `INSTALL.md`. Every shift in how data flows through the system (especially as content moves from hardcoded → DB-driven, eventually managed via an admin dashboard) lives in `docs/data-flow.md`. See `50-living-docs.mdc` for the rules that keep both docs honest.
+
+## Secrets & configuration (NON-NEGOTIABLE)
+
+**All secrets live in `.config/secrets.env` at the repo root.** This is the single source of truth: DB credentials, third-party API keys, signing/session secrets, SMTP passwords, AWS keys — everything that grants access to a system.
+
+- `.config/` is gitignored (see `.gitignore`). The only files committed from it are `secrets.env.example`, `README.md`, and `.gitkeep`.
+- `.config/secrets.env` is **never** committed. Not even once. Not even temporarily. Not even encrypted.
+- Server-side code (PHP) reads values through a single env loader (`api/lib/env.php` once the API exists). **No file outside `.config/` should contain secret values, and no code should hardcode a credential.**
+- The **frontend never reads from `.config/`**. The frontend has its own `frontend/.env` for purely public Vite values (e.g. `VITE_API_BASE_URL`). Anything `VITE_*`-prefixed ships to the browser, so it must never be a secret. If something must stay secret, it stays server-side and is accessed via the PHP API.
+- When adding a new secret: update **both** `.config/secrets.env` and `.config/secrets.env.example` in the same change, document it in `INSTALL.md`'s env table, and reference it in code through the env loader. Never copy/paste it elsewhere.
+- Per-environment values (local / staging / production) all live in **the same file shape**, with different real values on each machine. Don't invent per-environment files like `secrets.dev.env`, `secrets.prod.env` — that fragments the contract and makes deploys harder to audit.
+- Treat any secret that has ever appeared in chat, email, screenshot, log file, or a non-`.config/` file as **compromised** and rotate it.
+
+See `.config/README.md` for the operational details (setup, rotation, copy-from-example flow).
+
+## Default stack (subject to user override)
+- **Frontend**: Vite + React 18+ + TypeScript (strict mode)
+- **Routing**: React Router v6
+- **Styling**: Tailwind CSS with a small design-token layer (`src/styles/tokens.css`) for brand colors, typography, spacing
+- **Server state**: TanStack Query
+- **Forms**: React Hook Form + Zod for validation
+- **Package manager**: npm
+- **PHP**: 8.2+ with PDO, no framework unless explicitly requested. Composer for any libs.
+- **DB**: MariaDB on RDS, accessed only via prepared statements.
+
+If a request would change one of these defaults, **call it out before installing anything**.
+
+## Componentization philosophy
+Pragmatic, not religious. Roughly:
+- **`pages/`** — top-level route components. Each owns its layout and data fetching.
+- **`sections/`** — page-scale composites (hero, stats band, contact strip). Reused across 2–3 pages.
+- **`components/`** — small reused primitives (Button, Card, Link, Icon, Field). Build these only when reuse is real, not speculative.
+- **Avoid** wrapping every `<h1>`, `<p>`, or `<div>` in its own component. Tailwind utility classes are fine inline.
+- **Avoid** premature abstraction. If you'd only use it once, leave it inline until a second use case appears.
+
+## Global code conventions
+- TypeScript strict mode on. No `any` without a `// eslint-disable-next-line` and a one-line reason.
+- Prefer named exports. Default exports only for route components React Router or lazy-loads.
+- Files: `kebab-case` for non-component files, `PascalCase.tsx` for components, `use-x.ts` for hooks.
+- Imports: absolute via `@/` alias from `src/`. Never use deep relative imports like `../../../../`.
+- Never commit secrets. `.env*` files are gitignored; `.env.example` is committed and kept current.
+- No console.log in committed code. Use a tiny `lib/log.ts` wrapper if needed.
+- All user-facing strings live in JSX directly (no i18n layer yet — site is English only).
+
+## Quality bars
+- **Accessibility: WCAG 2.1 AA.** Semantic HTML first, ARIA only when semantics aren't enough. Every interactive element keyboard-reachable. Color contrast checked against the new brand palette.
+- **SEO**: every page sets `<title>`, `<meta name="description">`, OpenGraph tags, and a canonical URL via a `<PageHead>` component (or `react-helmet-async`). Generate `sitemap.xml` and `robots.txt` at build time.
+- **Performance**: Lighthouse ≥ 90 on Performance/Accessibility/Best Practices/SEO for the homepage and any page with hero media. Images served as WebP/AVIF with explicit width/height. Lazy-load below-the-fold media. Route-level code splitting via `React.lazy`.
+- **Security (it's finance, even if it's marketing)**:
+  - All form submissions go through the PHP API and are rate-limited.
+  - Contact / subscribe endpoints validate and sanitize on the server, never trust the client.
+  - HTTPS only; HSTS header set at the edge.
+  - No third-party trackers without explicit approval.
+
+## Cross-cutting changes (frontend ↔ API ↔ DB)
+When a change spans layers, do all of the related work in the same change — don't leave the contract half-updated.
+- Adding or modifying an endpoint requires, in the same commit/PR:
+  1. The PHP endpoint (validation + handler + repository).
+  2. Any DB migration the endpoint needs.
+  3. The TypeScript type in `frontend/src/api/types/` mirroring the response shape.
+  4. The typed client function and TanStack Query hook in `frontend/src/api/`.
+- When the API contract changes, **update the TypeScript type first, then the consumers** — let the type checker find every call site.
+- DB schema changes always go through a numbered migration; never edit a migration after it's been applied to any environment.
+
+## Working agreements for the AI assistant
+- **Do not install dependencies, scaffold the app, or run package managers without explicit confirmation.** This project is at zero — every install is a deliberate decision.
+- When proposing new dependencies, justify each one in one line and prefer the boring/standard choice.
+- When unsure about brand direction (color, type, voice), **ask** rather than invent. The brand is being rebuilt; placeholder choices become real fast.
+- Match the formality of Crayhill's domain in any copy you generate or scaffold.
+- When generating code, respect the layout above; if it doesn't exist yet, create it minimally rather than dumping everything in `src/`.

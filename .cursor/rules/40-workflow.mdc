@@ -1,0 +1,56 @@
+---
+description: Git, commits, environments, and assistant working agreements
+alwaysApply: true
+---
+
+# Workflow Rules
+
+## Git
+- Default branch: `main`.
+- Feature branches: `feat/<short-kebab>`, fixes: `fix/<short-kebab>`, chores: `chore/<short-kebab>`.
+- **Conventional Commits** for messages:
+  - `feat: add team page route and data hook`
+  - `fix(api): validate contact email length`
+  - `chore: bump vite to 5.4`
+  - `docs: clarify api response envelope`
+- Keep commits small and reviewable. Don't bundle unrelated changes.
+- Never commit:
+  - **Anything under `.config/` except `secrets.env.example`, `README.md`, and `.gitkeep`.** This folder holds every real secret — it must never appear in a diff. Run `git status` before every commit and confirm `.config/secrets.env` is not staged.
+  - `.env*` files (other than `*.env.example` templates).
+  - `node_modules/`, `vendor/`.
+  - Build artifacts: `dist/`, `build/`, `.vite/`, `.cache/`, coverage output.
+  - IDE files (`.idea/`, `.vscode/` unless workspace-shared) and OS junk (`.DS_Store`, `Thumbs.db`).
+- Before pushing, scan the diff for secret-like patterns (passwords, API keys, RDS endpoints, AWS keys). If you spot one in committed history, treat the secret as compromised and rotate it — `git rm` is not enough once it's been pushed.
+
+## Environments
+- `local` — developer machines.
+- `staging` — preview environment, behind basic auth or IP allowlist (this is unreleased brand work).
+- `production` — public crayhill.com.
+
+Each environment has its own `.config/secrets.env` on disk, never in the repo. The shape of the file is identical across environments (same keys, same example file); only the values differ. Provisioning the file on EC2 is documented in `INSTALL.md` and should be reproducible without referring to chat history or screenshots.
+
+The React app reads only `VITE_`-prefixed variables from `frontend/.env`. **Never put secrets in `VITE_`-prefixed vars** — they ship to the browser as plaintext in the bundle. If a value is secret, it lives in `.config/secrets.env` and is accessed only by the PHP API.
+
+## Definition of done (per page or feature)
+A page or feature isn't done until:
+- It renders correctly at 320px, 768px, 1024px, 1440px, and 1920px widths.
+- Keyboard navigation works end-to-end (tab order is sane, focus visible, no traps).
+- All images have explicit dimensions and `alt` text.
+- Lighthouse on a representative page is ≥ 90 across the four core categories.
+- Page has `<title>`, meta description, OG tags.
+- Any new API endpoint validates input, uses prepared statements, returns the standard envelope, and has at least one curl example documented.
+- Linter and type-check pass.
+- **Living docs are current.** If the change hit any update trigger in `50-living-docs.mdc` (new dependency, new env var, new endpoint, new table, new build/deploy step, content moving from hardcoded → DB), `INSTALL.md` and/or `docs/data-flow.md` are updated in the same commit.
+
+## Assistant working agreements (read this before acting)
+1. **Don't install anything without confirmation.** This applies to npm, composer, brew, system-level tools — anything that mutates the environment beyond writing repo files.
+2. **Don't scaffold the whole app in one shot.** Move in small, reviewable steps: project structure → tooling config → root layout → first page → first API endpoint → etc.
+3. **Surface assumptions, don't bury them.** If you're guessing at a brand color, a copy decision, a route name, or a schema field — say so explicitly and ask.
+4. **Match the project's seriousness.** No emojis in code, commits, comments, or UI. No jokey variable names. No "✨ magical ✨" anything.
+5. **Prefer boring tools.** When choosing between a clever new lib and a 5-year-old standard, choose the standard unless there's a clear win.
+6. **Stop and ask** when a request would:
+   - Add a new top-level dependency.
+   - Change one of the stack defaults in `00-project.mdc`.
+   - Touch security, auth, or data-handling code.
+   - Commit copy that asserts factual claims about Crayhill (AUM, regulatory status, deals).
+7. **No invented facts.** If you don't know something about Crayhill, the rebrand spec, or the API contract, ask. Don't fill the gap with plausible-sounding text.

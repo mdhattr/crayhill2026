@@ -1,0 +1,68 @@
+---
+description: React + TypeScript frontend conventions
+globs: frontend/**/*.{ts,tsx,js,jsx,css}
+alwaysApply: false
+---
+
+# Frontend Conventions (React + TS + Vite)
+
+These rules apply when working inside `frontend/`.
+
+## Components
+- One component per file. File name matches component name: `HeroBanner.tsx` exports `HeroBanner`.
+- Function components only. No class components.
+- Props typed via an exported `type Props = { ... }` (or `HeroBannerProps`) — exported so parents can compose.
+- No `React.FC`. Type props directly: `export function HeroBanner({ title }: Props) { ... }`.
+- Keep components under ~150 lines. If you cross that, split by concern (presentational vs. data-fetching) before adding more.
+- Co-locate component-specific helpers/types in the same file. Promote to a shared module only on the second usage.
+
+## Pages and routing
+- Each route is a folder under `src/pages/<route-name>/`. Folder contains `index.tsx` (the route component), any page-only sections, and a `meta.ts` with title/description/og data.
+- Routes are declared in a single `src/routes.tsx`. Use lazy imports for every page so each becomes its own chunk.
+- Use a top-level `<RootLayout>` for shared header/footer; never duplicate header/footer markup in pages.
+
+## Data fetching
+- All API calls go through `src/api/`. Never `fetch` directly inside a component or page.
+- Define a typed client function per endpoint, then a TanStack Query hook wrapping it (`useGetTeam`, `useSubmitContact`).
+- API response types live in `src/api/types/` and **mirror the PHP response envelope exactly**. When the API contract changes, update the type first and let the type checker find every consumer.
+- Server state lives in TanStack Query. Local UI state lives in `useState`. There is no Redux/Zustand for now — if a need arises, propose it explicitly.
+- Loading and error states are mandatory for any query that touches the API. Use a shared `<QueryBoundary>` (or skeletons) — no bare spinners that shift layout.
+- No `any`. Use `unknown` and narrow. The one allowed exception is when wrapping a third-party untyped lib, with an inline comment explaining why.
+
+## Styling
+- Tailwind utility classes are the default.
+- Brand tokens (colors, fonts, spacing scale, radii) live in `tailwind.config.ts` under `theme.extend`, sourced from `src/styles/tokens.css` CSS variables. Don't hardcode hex values in JSX.
+- Use Tailwind's `@apply` only inside `src/styles/` for genuinely reused atomic patterns (e.g., `.prose-crayhill`). Don't sprinkle `@apply` throughout component CSS files.
+- Class ordering: layout → spacing → sizing → typography → color → state. Don't fight Prettier's tailwind plugin once installed.
+- Responsive: mobile-first. Breakpoints follow Tailwind defaults unless the design system says otherwise.
+- Animations: subtle, professional. Prefer CSS transitions and `framer-motion` only when justified. No bouncy, springy, or playful motion — this is a finance site.
+
+## Accessibility (enforced)
+- Every `<img>` has meaningful `alt` (or `alt=""` if purely decorative).
+- Every interactive element is a real `<button>`, `<a>`, or form control. No clickable `<div>`s.
+- Focus states must be visible. Don't remove the outline without replacing it.
+- Headings descend properly: one `<h1>` per page, no skipped levels.
+- Form fields have associated `<label>`s. Errors are announced via `aria-live` regions.
+- Color is never the only signal (state, error, link).
+
+## Forms
+- React Hook Form for state, Zod for schema. Schema lives next to the form.
+- The same Zod schema is mirrored in PHP-side validation (manually, kept in sync via comments). Frontend validation is UX; backend validation is truth.
+- After submit, disable the button and show inline status. Never rely on a toast alone.
+
+## Performance
+- Route-level `React.lazy` for every page.
+- Images: `<img>` with explicit `width`/`height`, `loading="lazy"` for below-the-fold, `fetchpriority="high"` only on the LCP image.
+- Use the Vite `?url` / `?inline` import suffixes appropriately for assets. Prefer SVG for icons.
+- Avoid heavy client libs unless justified (no moment.js, no lodash-as-default — import individual functions).
+
+## Testing
+- Lightweight by default. Vitest + React Testing Library when components have meaningful logic (forms, conditional rendering, filtering).
+- Don't write tests for purely presentational components.
+- Co-locate tests as `Component.test.tsx`.
+
+## Don't
+- Don't add a CSS-in-JS library on top of Tailwind.
+- Don't introduce a UI kit (MUI, Chakra, Radix Themes) without proposing it first — they tend to fight a custom rebrand.
+- Headless primitives (Radix UI, React Aria) are fine for accessible building blocks (menus, dialogs, tabs); install per need, not in bulk.
+- Don't use `dangerouslySetInnerHTML` for API content unless it's been server-sanitized in PHP.

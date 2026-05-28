@@ -1,0 +1,103 @@
+---
+description: PHP API conventions for the Crayhill rebrand
+globs: api/**/*.php
+alwaysApply: false
+---
+
+# PHP API Conventions
+
+These rules apply when working inside `api/`.
+
+## Stack
+- PHP **8.2+**.
+- No framework by default. A thin custom router in `api/lib/router.php` is acceptable; reach for Slim only if routing complexity demands it.
+- Composer for any third-party libs. Vendor folder gitignored.
+- PDO for all DB access. **No mysqli, no raw query strings with interpolation.**
+- DB: MariaDB on AWS RDS. Connection details from environment variables, never hardcoded.
+
+## Endpoint shape
+- Versioned: `/api/v1/<resource>`.
+- REST verbs: `GET` for reads, `POST` for creates and form submissions, `PATCH` for partial updates, `DELETE` for deletes.
+- Always JSON in, JSON out. `Content-Type: application/json` enforced.
+- Every response uses a consistent envelope:
+  ```json
+  { "data": ..., "error": null, "meta": { ... } }
+  ```
+  or on failure:
+  ```json
+  { "data": null, "error": { "code": "VALIDATION_ERROR", "message": "...", "fields": { ... } } }
+  ```
+- HTTP status codes are correct: 200/201/204 for success, 400 for validation, 401/403 for auth, 404 for missing, 422 for semantic errors, 429 for rate limit, 500 for server faults. Don't return 200 with an error envelope.
+- **Dates** in JSON are ISO 8601 strings in UTC (e.g. `"2026-04-28T15:04:05Z"`). The frontend formats for display.
+- **Pagination** for list endpoints uses query params `?page=1&per_page=20` and the response includes:
+  ```json
+  { "data": [...], "error": null, "meta": { "page": 1, "per_page": 20, "total": 123 } }
+  ```
+  Default `per_page` is 20, max is 100. Reject anything outside that.
+- **IDs**: pick integer auto-increment **or** UUID per resource and stick with it. Document the choice in the resource's first migration. Don't mix the two for one resource.
+
+## Security (non-negotiable)
+- **All user input is validated server-side.** Frontend validation is UX, not protection.
+- **Prepared statements only.** Never concatenate or interpolate values into SQL.
+- Escape output appropriately for the context (HTML, JSON, headers).
+- CORS: explicit allowlist of origins, never `*`.
+- CSRF: any state-changing endpoint called from the browser uses a same-site cookie + token, or requires a signed Origin/Referer check. Document the chosen approach in `api/lib/security.php`.
+- Rate-limit public endpoints (contact form, newsletter) at the application or edge layer. Default: 5 requests / minute / IP unless otherwise specified.
+- Log errors with enough context to debug. **Never log secrets, passwords, full PII, or full request bodies of contact forms.**
+- Error responses sent to the client never include stack traces or SQL. Detailed errors go to the server log only.
+- **Passwords** (if/when auth is added) are hashed with `password_hash($pw, PASSWORD_DEFAULT)` and verified with `password_verify`. Never roll your own hashing, never store plaintext, never log password fields.
+- Re-authorize on every request. Don't trust that a previous step verified permissions.
+
+## Database access
+- One file per resource in `api/lib/db/` (e.g. `api/lib/db/team.php`) exposing typed-ish functions: `get_team_member($id)`, `list_team_members()`. SQL lives **only** in this layer.
+- Use a single shared PDO instance from `api/lib/db.php`. Set `PDO::ATTR_ERRMODE = ERRMODE_EXCEPTION` and `PDO::ATTR_EMULATE_PREPARES = false`.
+- **All connections to RDS use TLS with verified server certificates.** PDO options must include `PDO::MYSQL_ATTR_SSL_CA` pointing at `api/certs/aws-rds-ca-bundle.pem` and `PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT = true`. The bundle is the AWS-published combined RDS root CA file (public, not a secret) — committed to the repo so deploys are deterministic. Refresh it from `https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem` whenever AWS rotates it. No code path may bypass this, including for "quick local debugging" — connect to a local docker MySQL instead if you need plaintext.
+- No ORM. No automatic migration on request — migrations are run manually or via a deploy step.
+- Schema changes are additive when possible; coordinate breaking changes with the frontend.
+
+### Schema conventions
+- Charset and collation: **`utf8mb4` / `utf8mb4_unicode_ci`** everywhere. No `latin1`.
+- Foreign keys are required wherever a relationship exists. Use `ON DELETE` / `ON UPDATE` clauses deliberately — pick `RESTRICT`, `CASCADE`, or `SET NULL` per case, don't accept the default blindly.
+- Add an index on every column used in a `WHERE`, `JOIN`, or `ORDER BY`. Composite indexes when queries filter on multiple columns together.
+- Prefer **soft deletes** (`deleted_at TIMESTAMP NULL`) for any user-facing or audit-relevant record. Repository functions filter `WHERE deleted_at IS NULL` by default; expose an `includeDeleted` option only when needed.
+- Standard timestamps on most tables: `created_at`, `updated_at` (and `deleted_at` if soft-deletable).
+
+### Migrations
+- Migrations live in `api/migrations/` as **numbered, dated SQL files**: `YYYY_MM_DD_NNN_description.sql` (e.g. `2026_04_28_001_create_team.sql`).
+- One logical change per migration. Don't edit a migration after it's been applied anywhere — write a new one.
+- Every migration is reversible in principle: include a comment block at the top describing how to roll it back, even if you don't ship a separate `down` file.
+
+## Code style
+- `declare(strict_types=1);` at the top of every PHP file.
+- PSR-12 formatting.
+- snake_case for functions and variables, PascalCase for classes (if used).
+- One responsibility per file. Endpoint files are thin: parse → validate → call lib → respond.
+- Shared response helpers in `api/lib/response.php`: `respond_ok($data)`, `respond_error($code, $message, $fields = [])`, `respond_no_content()`.
+
+## Configuration
+- **All secrets live in `.config/secrets.env` at the repo root** (see `00-project.mdc` → "Secrets & configuration"). The PHP API reads values from there through a single loader at `api/lib/env.php`. Nothing else is allowed to read secrets, and nothing else is allowed to contain them.
+- `api/lib/env.php` parses `.config/secrets.env` once per request, exposes a `env(string $key, mixed $default = null): mixed` function, and **never logs or echoes the values it loaded**. It must throw if a required key is missing, with a message that names the key but not the value.
+- Do **not** create `api/.env`, `api/config/.env`, or any other secrets file under `api/`. There is exactly one secrets file in this project, and it lives in `.config/`.
+- When adding a new required env key, update `.config/secrets.env`, `.config/secrets.env.example`, and the env-vars table in `INSTALL.md` in the same commit.
+- Required keys at minimum: `APP_ENV`, `APP_DEBUG`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_ADMIN_USER`, `DB_ADMIN_PASSWORD`, `ALLOWED_ORIGINS`.
+
+### Database credentials: two-user split
+This project uses **two separate DB users**, and they MUST stay separate at every layer:
+
+| Variable | Read by | Privileges | Purpose |
+|---|---|---|---|
+| `DB_USER` / `DB_PASSWORD` | `api/lib/db.php` (runtime API) | `SELECT, INSERT, UPDATE, DELETE` on `crayhill.*` only. `REQUIRE SSL`. No DDL, no GRANT. | Every normal HTTP request. |
+| `DB_ADMIN_USER` / `DB_ADMIN_PASSWORD` | `api/lib/migrate.php` only | RDS admin (currently `admin`). | Applying schema/permissions migrations. |
+
+- Runtime code paths must **never** read `DB_ADMIN_*`. Only the migration runner does. If you find yourself wanting admin privileges from a request handler, the answer is to write a migration, not to widen the runtime user.
+- The app user is created by a tracked migration (`2026_04_28_002_create_app_user.sql`) so its existence and grants are reproducible across environments. Re-running that migration is the canonical way to rotate the app user's password.
+- In production, `DB_ADMIN_*` should be injected via the deploy environment for the duration of the migration step, not persisted in `.config/secrets.env` on the server. Local dev keeps both pairs in `secrets.env` for convenience.
+
+## What goes in the API right now
+For an 18-page marketing site, expect the API to be small. Likely endpoints:
+- `POST /api/v1/contact` — contact form submission (validate, store, optionally email).
+- `POST /api/v1/subscribe` — newsletter signup (if used).
+- `GET  /api/v1/news` — news/insights listing (if managed in DB rather than static).
+- `GET  /api/v1/team` — team listing (if managed in DB).
+
+**Don't build endpoints speculatively.** If a page can be served from static content in the React app, do that until there's a real reason to move it to the DB.

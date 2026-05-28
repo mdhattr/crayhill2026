@@ -1,0 +1,127 @@
+---
+description: Living documentation requirements (install/deploy runbook + data flow doc)
+alwaysApply: true
+---
+
+# Living Documentation Rules
+
+This project maintains two **living documents** that must stay current as the codebase evolves. They are not written up-front — they grow with the work. The rule is simple: **the change isn't done until the relevant doc is updated in the same commit.**
+
+These docs exist primarily so the project can be built, run, and deployed (eventually onto an AWS EC2 instance) by someone who has never seen it before.
+
+---
+
+## Document 1 — `INSTALL.md` (repo root)
+
+A step-by-step runbook covering everything needed to go from a clean machine to a running build, both **locally** and on the **production EC2 instance**.
+
+### Status
+- Do **not** create this file until the first dependency or build step actually exists. Premature scaffolding leads to lies-on-paper.
+- The first commit that adds `package.json`, `composer.json`, a Dockerfile, a deploy script, or any system dependency **must** also create `INSTALL.md` and seed the relevant section.
+
+### Required sections (add as the project grows; don't write empty stubs)
+1. **Overview** — one paragraph describing what this app is and what it depends on.
+2. **System requirements** — OS expectations (Amazon Linux 2023 / Ubuntu LTS), required system packages (Node major version, PHP version, MariaDB client, Apache/Nginx, certbot, git, etc.), with exact versions where they matter.
+3. **Local development setup** — every command needed to clone, install, configure env, and run both the frontend dev server and the PHP API locally. Tested top-to-bottom by the person adding the step.
+4. **Environment variables** — full table of every key in `.config/secrets.env` (the canonical secrets file for the project; see `00-project.mdc` → "Secrets & configuration") plus any public `VITE_*` keys in `frontend/.env`. Each row: name, where it's used, example value, whether it's required, whether it's secret. The table is mirrored in `.config/secrets.env.example` (and `frontend/.env.example` for the public ones) — keep them in sync in the same commit. Real values for staging/production are documented as "provisioned manually on the server" or "from AWS Secrets Manager", never inlined here.
+5. **Database setup** — how to provision the MariaDB schema locally and on RDS, how migrations are applied, how to seed any required reference data.
+6. **Build steps** — how to produce a production-ready frontend bundle and how to prepare the PHP API for deployment.
+7. **EC2 deployment** — provisioning, web server config (Nginx or Apache vhost example), PHP-FPM config, SSL via certbot, file permissions, where the React `dist/` is served from, how the API is reverse-proxied, log locations, restart commands.
+8. **First-time deploy checklist** — ordered list of steps for the very first deploy of the app to a fresh EC2 box.
+9. **Routine deploy checklist** — ordered list for subsequent deploys (pull, install, build, migrate, restart).
+10. **Troubleshooting** — common failure modes and the fix, added each time we hit one.
+
+### Update triggers (every one of these requires an `INSTALL.md` update in the same commit)
+- Adding, removing, or upgrading any dependency in `package.json` or `composer.json` (note the lockfile version, not just the range).
+- Adding any system-level requirement (a new CLI tool, a PHP extension, an Nginx module, an OS package).
+- Adding or renaming any environment variable. Update `.env.example` in the same change.
+- Changing the build command, the dev command, or any npm/composer script that a deployer would run.
+- Adding or changing a migration step, a seed step, or any DB bootstrap command.
+- Changing web server config, file paths, or service names on EC2.
+- Adding any cron job, queue worker, or background process.
+
+### Style
+- Commands in fenced code blocks, copy-pasteable, with no shell prompts (`$`).
+- Note when a step is "run once" vs. "run on every deploy".
+- When a step is environment-specific, label it clearly: **Local**, **Staging**, **Production**.
+- Don't link out to external docs as a substitute for instructions — quote the exact commands needed.
+
+---
+
+## Document 2 — `docs/data-flow.md`
+
+A plain-English + diagrams description of how data moves through the system. The audience is a future developer (or future-you) who needs to understand "where does this content come from?" without reading the whole codebase.
+
+### Status
+- Do **not** create this file until the first real data flow exists (first API call, first DB read, first hardcoded content set that will eventually move to the DB).
+- Once it exists, treat it as the authoritative map of the system's data.
+
+### Required sections (add as the project grows)
+1. **System overview diagram** — a simple block diagram (ASCII or Mermaid) of React ↔ PHP API ↔ MariaDB, with the boundaries labeled.
+2. **Current state vs. target state** — this project starts mostly hardcoded and grows toward a CMS-like admin dashboard. Each content domain (team, news, page copy, images, etc.) gets a row in a table:
+   | Domain | Current source | Target source | Migration trigger |
+   |---|---|---|---|
+   | News & Insights | Hardcoded JSON in `frontend/src/data/news.ts` | `GET /api/v1/news` backed by `news` table | When admin dashboard ships |
+   | Team | …  | … | … |
+3. **Per-domain data flow** — for each content domain, document:
+   - Where the data lives today (file path or DB table).
+   - How it reaches the page (hook, component, route).
+   - What the API contract is, if any.
+   - What the migration path is when it moves from hardcoded to DB-driven.
+4. **Forms / writes** — every form on the site, its endpoint, what gets stored, what side effects fire (email, log entry).
+5. **Admin dashboard (planned)** — a section that grows as the dashboard takes shape: which content it manages, who can access it, how auth works, what audit trail is kept. Until the dashboard is built, this section is a **plan** — clearly labeled as such.
+6. **Image and asset flow** — how images are served today (static imports from `frontend/src/assets/`) vs. eventually (uploaded via admin, stored in S3 or on the EC2 disk, referenced by URL in the DB). Image management is one of the primary motivators for the admin dashboard, so this section gets its own attention.
+7. **Caching and invalidation** — once any caching exists (HTTP, TanStack Query staleTime, CDN), document where it lives and how it's invalidated.
+
+### Update triggers (every one of these requires a `docs/data-flow.md` update in the same commit)
+- Adding any new API endpoint or changing the response shape of an existing one.
+- Adding a new table, column, or migration that changes what data is stored.
+- Moving any content domain from hardcoded → API/DB-driven (this is the **headline event** for this project — flag it clearly in the doc and in the commit message).
+- Adding a new form, write endpoint, or background process.
+- Introducing image uploads or any user-managed asset.
+- Adding caching or changing cache behavior.
+- Beginning work on the admin dashboard (each phase: auth, content list, edit screen, image upload, etc.).
+
+### Style
+- Prefer Mermaid diagrams for flow; keep them small and readable.
+- When something is planned but not built, mark it clearly: `**[planned]**` or in a "Future" callout. Don't conflate intent with reality.
+- Cross-reference file paths so the reader can jump straight to the code.
+
+---
+
+## Where things live
+
+```
+/                       repo root
+├── INSTALL.md          living install + EC2 deploy runbook
+├── README.md           short project intro (created once there's something to introduce)
+├── docs/
+│   ├── data-flow.md    living data flow doc
+│   └── Crayhill Web Assets/   designer source files (logos, icons, images, page mockups)
+├── frontend/
+│   └── .env.example    committed; mirrors INSTALL.md env table
+└── api/
+    └── .env.example    committed; mirrors INSTALL.md env table
+```
+
+The README at the repo root, when it eventually exists, should be a **short** orientation (what the project is, where to find `INSTALL.md` and `docs/data-flow.md`, who to contact). Keep all install-and-deploy specifics in `INSTALL.md` so there's exactly one source of truth.
+
+---
+
+## Anti-patterns (don't do these)
+
+- Don't write `INSTALL.md` or `docs/data-flow.md` ahead of the code. Empty/aspirational sections become lies the moment something changes.
+- Don't update the docs in a follow-up commit "later." Same commit, same PR, every time.
+- Don't paste output from package managers (long install logs, lockfile dumps) into the docs. Document the **command**, not the output.
+- Don't duplicate the same content across `INSTALL.md`, `README.md`, and `data-flow.md`. Each doc has a specific job; cross-link instead of copy-paste.
+- Don't let the "current state vs. target state" table in `data-flow.md` drift. The point of that table is to tell future-you exactly which domains are still hardcoded and waiting to be migrated.
+
+---
+
+## Assistant working agreement
+
+When proposing or making any change that hits an **update trigger** above:
+1. Call out which doc(s) need updating, in the same response.
+2. Make the doc edits in the same change as the code edits — never as a follow-up.
+3. If the doc doesn't exist yet and a trigger fires, create it (using the section list above) and seed only the section the current change actually justifies.
+4. If a change touches the **current vs. target state** of a content domain (e.g. moving news from hardcoded JSON to a DB-backed endpoint), say so explicitly in the commit message and update the table in `docs/data-flow.md`.

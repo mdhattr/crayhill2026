@@ -1,0 +1,113 @@
+# =============================================================================
+# crayhillRebrand — .gitignore
+# =============================================================================
+# Conventions:
+#   - Secrets live under .config/ (see INSTALL.md "Environment variables").
+#   - Lockfiles (package-lock.json, composer.lock) ARE committed; do NOT
+#     add them here.
+#   - Whitelist exceptions (`!path`) must come AFTER the rule that would
+#     otherwise ignore them, or git won't honor the negation.
+# =============================================================================
+
+# --- Secrets ---------------------------------------------------------------
+# All secrets (DB credentials, API keys, signing keys, SMTP passwords, etc.)
+# live under .config/. Nothing from there is ever committed except documented
+# example files and the folder's own README.
+.config/*
+!.config/*.example
+!.config/README.md
+!.config/.gitkeep
+
+# Legacy .env locations (any .env at the repo root or inside frontend/api).
+# Prefer .config/secrets.env going forward; this catches accidental drift.
+.env
+.env.*
+!.env.example
+
+# --- Keys ------------------------------------------------------------------
+# SSH private keys (e.g. crayhill-web.pem for the EC2 instance), TLS private
+# keys, GPG keys, password DBs. Belt-and-suspenders even though convention
+# says to keep these in ~/.ssh — easier to refuse to commit them than to
+# rotate after a leak.
+#
+# CARVE-OUT: api/certs/aws-rds-ca-bundle.pem is Amazon's PUBLIC root-CA
+# bundle, used by PDO to verify the RDS server cert. Public certificate, not
+# a secret — must be committed so the API ships with a valid trust anchor.
+*.pem
+*.key
+*.p12
+*.pfx
+*.kdbx
+!api/certs/aws-rds-ca-bundle.pem
+
+# --- Dependencies ----------------------------------------------------------
+# Re-installed by `npm ci` (frontend) and `composer install` (api/, when
+# Composer lands). Committing these would balloon the repo; CI / deploy
+# scripts run the install commands.
+node_modules/
+vendor/
+composer.phar
+
+# --- Build output & caches -------------------------------------------------
+# Vite output (`npm run build` → frontend/dist/), generic build dirs, tool
+# caches. Everything here is reproducible from source.
+dist/
+build/
+.vite/
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+.npm/
+
+# TypeScript incremental build info — `tsc --build` writes these next to
+# the relevant tsconfig.*.json files (e.g. frontend/tsconfig.app.tsbuildinfo).
+*.tsbuildinfo
+
+# --- Logs ------------------------------------------------------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Test / coverage -------------------------------------------------------
+# Frontend (vitest / istanbul) and PHP (PHPUnit) artifacts. Caches help
+# local re-runs but are reproducible — not worth the diff noise.
+coverage/
+.nyc_output/
+.phpunit.result.cache
+.phpunit.cache/
+
+# --- Editor / OS junk ------------------------------------------------------
+# macOS Finder metadata + AppleDouble side-files, Windows thumbnails,
+# JetBrains IDE config, vim / emacs swap and backup files. Per-machine;
+# do not commit.
+.DS_Store
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.idea/
+*.swp
+*.swo
+*~
+
+# VS Code (and Cursor) workspace settings vary per developer. Anything that
+# should be shared across the team belongs in .editorconfig or a
+# project-level rule (.cursor/rules/*) rather than .vscode/.
+.vscode/
+
+# --- Local-only ------------------------------------------------------------
+# Convention: any file ending in .local is a developer's local override and
+# never gets committed. Useful for ad-hoc per-machine config (e.g.
+# vite.config.local.ts).
+*.local
+
+# --- Designer source files -------------------------------------------------
+# Page Mockups currently total ~3.6 GB (PDF exports). They live elsewhere
+# (Dropbox / Drive / S3 — see docs/data-flow.md when written) and must NEVER
+# be committed. Belt-and-suspenders: ignore the folder explicitly AND any
+# PDF anywhere under docs/.
+docs/Crayhill Web Assets/Page Mockups/
+docs/**/*.pdf

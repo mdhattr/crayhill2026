@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Crayhill Capital Management — site rebuild in progress."
+    />
+    <meta name="robots" content="noindex,nofollow" />
+
+    <!--
+      New Science (display font) is delivered via Adobe Fonts / Typekit.
+      Kit `snm7qqk` is configured to ship only New Science (Montserrat is
+      self-hosted via @fontsource and is intentionally excluded from the
+      Typekit project to avoid duplicate @font-face declarations).
+      The preconnect hints open the TCP+TLS handshake to Adobe's font CDN
+      before the stylesheet is even requested, saving ~100-300ms on the
+      first page load.
+    -->
+    <link rel="preconnect" href="https://use.typekit.net" crossorigin />
+    <link rel="preconnect" href="https://p.typekit.net" crossorigin />
+    <link rel="stylesheet" href="https://use.typekit.net/snm7qqk.css" />
+
+    <title>Crayhill Capital Management</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

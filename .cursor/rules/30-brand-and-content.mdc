@@ -1,0 +1,111 @@
+---
+description: Brand voice, copy, and content conventions for the Crayhill rebrand
+alwaysApply: true
+---
+
+# Brand & Content Rules
+
+The new site is a rebrand, not a redesign sprinkle. Treat brand decisions as load-bearing.
+
+## Audience and voice
+- Primary audience: **institutional investors and counterparties** (pension plans, insurance companies, foundations, sponsors, sophisticated borrowers). Secondary: prospective hires, financial press.
+- Voice: **measured, expert, plainspoken**. Say what is true and useful. Avoid jargon when a clearer word works; keep the precise term when it's the actual term of art ("asset-based finance", "credit risk transfer", "structured finance" — these stay).
+- Avoid: hype, exclamation marks, marketing fluff ("revolutionize", "best-in-class", "cutting-edge"), AI-isms ("dive in", "unleash", "in today's fast-paced world"), playful microcopy.
+- Numbers earn trust: cite AUM, sectors, vintages where relevant. Don't fabricate figures — if a number is unknown, leave a `TODO(content):` and ask.
+
+## Copy mechanics
+- US English.
+- Title case for `<h1>`/`<h2>`. Sentence case for `<h3>` and below, buttons, and nav.
+- Oxford comma. One space after periods.
+- Numbers: spell out one through nine; use digits for 10 and above. Always digits for currency (`$3 billion`, `$150 million`).
+- Currency, percentages, and dates follow standard finance conventions (`January 9, 2026`, not `1/9/26`).
+- Don't end button labels with periods. Buttons start with a verb (`Contact us`, `View strategy`).
+
+## Brand assets
+
+The repo distinguishes between **production-bound assets** (committed, served to visitors) and **designer source files** (not committed, may be large). Keep these strictly separated.
+
+### Production-bound assets — `assets/` at the repo root
+Real brand assets delivered by the designer live here, organized by category:
+- `assets/crayhill-r-logo-svg/` — primary logo and logomark (black/color/white).
+- `assets/icons/` — content/UI icons (SVG).
+- `assets/images/` — photography (.jpg/.png): heroes, headshots, articles, sectors.
+
+Conventions:
+- All folder and file names under `assets/` are **kebab-case** (lowercase, hyphen-separated, URL-clean). New assets follow the same convention.
+- Vite serves this folder as its `publicDir`, so files are referenced from JSX with **root-relative URLs**: `<img src="/images/headshot-joe.jpg" />`, `<img src="/icons/icon-email.svg" />`. Never `import` an asset as an ES module — that hashes the filename and breaks the future admin-managed-image flow.
+- Don't rename folders or files without coordinating with the designer; renames break references everywhere.
+- `<img>` always has meaningful `alt` text. Decorative icons use `alt="" aria-hidden="true"`.
+- Stock photography is forbidden in this folder. Only designer-delivered assets ship here.
+- See `INSTALL.md` → "Static assets" for the full convention.
+
+### Designer source files — `docs/` (gitignored when large)
+Mockups, PDFs, `.psd`/`.ai`/`.fig` files belong under `docs/`. Page mockups are explicitly gitignored (see `.gitignore`). Source files do not ship with the production bundle.
+
+### Tokens still hold for non-asset brand decisions
+- Color palette: partly placeholder, partly real. Real colors land in `@theme` in `frontend/src/styles/global.css` one at a time as the designer hands them off. Same swap pattern always — change the token in one place, no hardcoded colors in components.
+- Type scale: real spec installed. Both fonts are live:
+  - **Montserrat** (`--font-sans`, body / UI) — self-hosted via `@fontsource` (open-source SIL OFL, ships fine via npm).
+  - **New Science** (`--font-display`, H1-H4) — delivered via Adobe Fonts / Typekit kit `snm7qqk`, `<link>` in `frontend/index.html`. Commercially licensed; Typekit is the only legitimate distribution channel for this font.
+  - Per-element rules live in `@theme` tokens + `@layer base` in `global.css`. Canonical table in `INSTALL.md` → "Type scale".
+- **Headings: visual styling = semantic tag.** Anywhere a piece of text is styled at H1/H2/H3/H4/H5 typography, the HTML element MUST be the matching `<h1>`-`<h5>` tag. The heading tag carries the typography (size, weight, line-height, family, and for H5 the uppercase + tracking) via `@layer base` rules — components should not reach for the `text-h*` utility class to fake heading sizing on a `<div>` or `<span>`. For interactive elements styled at heading typography (a nav button styled at H4, a footer column title that's also a link styled at H5), wrap the interactive element in the heading tag: `<h4><button>...</button></h4>` or `<h5><NavLink>...</NavLink></h5>`. The wrapping heading supplies typography + semantics; the inner button/link supplies interaction. The `text-h*` utility classes exist only as an escape hatch for genuinely non-semantic display surfaces and should be questioned in code review when they appear.
+- When a brand value is missing or under review, leave a `TODO(brand):` marker rather than inventing one.
+
+## Layout system
+
+The brand has a tight, consistent rhythm. Stick to it. New work that diverges should explain why.
+
+### Container width
+- **1280px max content width** (`max-w-7xl` in Tailwind). Every major content wrapper inside a `<section>` uses `mx-auto max-w-7xl`. The outer `<section>` itself still extends edge-to-edge — its background color fills the viewport — only the inner wrapper is constrained.
+- Above 1280px viewport: content stays centered, background bleeds. Below: content fills width, with `px-6 sm:px-10` (24px → 40px) horizontal padding so it doesn't kiss the viewport edges.
+- Text-measure constraints inside the 1280px container (centered prose, intro paragraphs, etc.) are separate — those use the body-copy max-widths (`max-w-3xl`, `max-w-4xl`, etc.) on the text element itself, not on the container.
+
+### Grid gutter
+- **40px horizontal gutter** between columns in every multi-column grid (`gap-x-10` in Tailwind — 10 × 0.25rem = 2.5rem = 40px).
+- Vertical gap in stacked-on-mobile layouts is not part of the brand spec; pick a value that reads as one breath between unrelated cards (`gap-y-12` / `gap-y-14` are the existing precedents — match them rather than introducing new ones).
+
+### Vertical rhythm — three semantic tokens
+Defined in `@theme` in `frontend/src/styles/global.css`. Use them. Don't invent new vertical spacings without a designer spec.
+
+- **`--spacing-module` = 7.5rem (120px)** — top + bottom padding of a major page section ("module"). Use as `py-module`, `pt-module`, `pb-module` on the outer `<section>`. This is the spacing that lets one module breathe against the next.
+- **`--spacing-element` = 5.625rem (90px)** — internal spacing inside a module: between a headline and the row of content beneath it, between an image and the next element. Use as `mt-element`, `mb-element`.
+- **40px = `gap-x-10` / `mt-10` / etc.** — tight spacing for text-heavy contexts: between body copy and an inline CTA, between an article title and a date line, between a horizontal rule and the next list item. No custom token because the default Tailwind 0.25rem spacing scale already hits 40px at `10`.
+
+### Designer-supplied per-section overrides
+The designer will sometimes call out a deviation explicitly — e.g. the ABF Credit Opportunities page's 90px module top/bottom padding instead of the standard 120px. Write those as **arbitrary values** (`py-[90px]`), not as `py-element`, even if the number matches a token. The arbitrary value reads as "this section intentionally diverges"; the token reads as "this is the standard rhythm". Same number, different intent.
+
+If a deviation recurs three times across the codebase, that's a signal it should earn its own token. Until then, leave it as a clearly-marked arbitrary value.
+
+### Don't
+- Don't use `py-24`, `py-28`, `py-32` for module padding. Use `py-module`.
+- Don't use `mt-20`, `mt-24` for inside-module spacing between major elements. Use `mt-element`.
+- Don't introduce a new `--spacing-foo` token without a brand spec to back it up.
+- Don't widen or narrow the canonical 1280px container per-section. If a section visually wants to feel narrower (e.g. a centered prose block), constrain the text element with `max-w-3xl`, leave the container at 1280px.
+
+## Content sources
+- Page copy that exists on the current site is a **starting reference**, not a final source. Don't copy/paste large blocks without flagging them for editorial review.
+- All copy that mentions strategies, AUM, regulatory status, or specific deals must be reviewed before publishing — leave a `TODO(legal):` if you're scaffolding placeholder versions.
+- News & insights items: structure them as data (title, dek, date, url, source) rather than free-form HTML, so they can move to the API later without a rewrite.
+
+## Page list (working assumption — confirm before scaffolding all routes)
+Likely structure for ~18 pages, based on the current crayhill.com:
+1. Home
+2. About / Firm overview
+3. Our team
+4. Investment strategies (overview)
+5. Real Estate
+6. Power & Infrastructure
+7. Technology, Media, and Telecom (TMT)
+8. Commercial Finance
+9. Credit Risk Transfer
+10. (Other strategy pages as needed)
+11. News & Insights (index)
+12. News & Insights (detail template)
+13. Responsible Investing / ESG
+14. Form ADV / Disclosures
+15. Careers
+16. Contact
+17. Privacy Policy
+18. Terms of Use
+
+Confirm the final list before generating route stubs.

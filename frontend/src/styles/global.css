@@ -1,0 +1,257 @@
+/*
+ * Global stylesheet — brand integration in progress.
+ *
+ * Font roles:
+ *   --font-sans     -> body / UI text. Montserrat, self-hosted via
+ *                      @fontsource (loaded in main.tsx). Open-source SIL OFL.
+ *   --font-display  -> headlines / hero copy (H1-H4). New Science, delivered
+ *                      via Adobe Fonts / Typekit (kit `snm7qqk`). The
+ *                      <link rel="stylesheet"> lives in index.html. Falls
+ *                      back through Montserrat if the Typekit CDN is
+ *                      unreachable — headlines never go un-styled.
+ *
+ * Type scale (per-element specs from designer):
+ *   See INSTALL.md "Type scale" section for the canonical table. Tokens
+ *   below are the source of truth; @layer base rules consume them so the
+ *   semantic HTML elements (<h1>..<h5>, <p>, <body>) just work without
+ *   per-component utility soup. Tailwind v4 also auto-generates matching
+ *   utility classes (text-h1, text-body-2, ...) for the rare cases where
+ *   you need a non-semantic element to inherit a typographic role.
+ *
+ * Color tokens are still partly placeholder; brand color decisions land
+ * here one at a time as the designer hands them off. Do NOT treat any
+ * placeholder value as final.
+ *
+ * "Title Case" / "Sentence case" in the spec are AUTHORING conventions, not
+ * CSS transforms. CSS only offers `capitalize` (capitalizes every word,
+ * including small words like "of"/"the" — wrong AP/Chicago title case) and
+ * `uppercase`. Authors write headings in correct title case directly; CSS
+ * does not enforce it. Only H5 has a true CSS transform (uppercase).
+ *
+ * Adding a Montserrat weight: import the @fontsource subpath in main.tsx.
+ * Adding a New Science weight: tick it in the Adobe Fonts dashboard for
+ * kit `snm7qqk`; no code change needed.
+ */
+
+@import 'tailwindcss';
+
+@theme {
+  --color-ink: #111111;
+  --color-paper: #fafaf7;
+  --color-paper-alt: #f3f3f3;
+  /*
+   * Mid-dark navy surface for hero-adjacent "core blocks" — the dark intro
+   * panel below the homepage hero, etc. Lighter and bluer than paper-dark
+   * (which is the footer). Designer hex: #293A51.
+   */
+  --color-paper-deep: #293a51;
+  /* Dark surface for the footer (and future dark sections). */
+  --color-paper-dark: #1b2636;
+  --color-muted: #555555;
+  --color-muted-soft: #8b8a8a;
+  --color-rule: #d8d6cf;
+  /* Softer rule for low-emphasis container borders (dropdown panels, etc.). */
+  --color-rule-soft: #e8e8e8;
+  --color-link: #1a1a1a;
+  /* Brand accent blue (footer titles; likely used elsewhere later). */
+  --color-accent: #57a0dd;
+  /*
+   * Brand accent green — interactive hover/click state for sector labels
+   * (Asset Focus block) and any future "interactive emphasis" treatment.
+   * Distinct from --color-accent (blue), which is a default/emphasis color
+   * for non-interactive titles. Designer hex: #92BE4B.
+   */
+  --color-accent-green: #92be4b;
+  /*
+   * Brand accent navy — the second-darkest swatch in the navy→sky-blue
+   * gradient (used as bar #2 in the Asset Focus block, and as the default
+   * color for prominent CTAs like "Read More" on the News & Insights
+   * cards). Sits between paper-deep (darker) and accent (lighter blue).
+   * Designer hex: #374D6C.
+   */
+  --color-accent-navy: #374d6c;
+  /*
+   * Brand accent light — the lightest swatch in the navy→sky-blue
+   * gradient. Same hex as the Specialty Finance bar in the homepage
+   * Asset Focus block. Used by the sector-page variant of
+   * <KeyItemsList /> for the divider rules between H3-styled row items
+   * (designer's explicit spec on the Power & Infrastructure page).
+   * Designer hex: #9AC6EB.
+   */
+  --color-accent-light: #9ac6eb;
+
+  --font-sans:
+    'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
+    'Helvetica Neue', Arial, sans-serif;
+
+  /*
+   * 'new-science' is the family name Adobe Fonts declares (lowercase,
+   * kebab-case) in the Typekit CSS at use.typekit.net/snm7qqk.css.
+   * Montserrat is the next fallback so headlines stay visually coherent
+   * if the Typekit CDN is slow or unreachable.
+   */
+  --font-display:
+    'new-science', 'Montserrat', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', system-ui, 'Helvetica Neue', Arial, sans-serif;
+
+  /* Display scale (H1–H4 use --font-display; H5 explicitly uses --font-sans). */
+  --text-h1: 72px;
+  --text-h1--line-height: calc(76 / 72);
+  --text-h1--font-weight: 500;
+
+  --text-h2: 48px;
+  --text-h2--line-height: calc(52 / 48);
+  --text-h2--font-weight: 400;
+
+  --text-h3: 28px;
+  --text-h3--line-height: calc(36 / 28);
+  --text-h3--font-weight: 500;
+
+  --text-h4: 22px;
+  --text-h4--line-height: calc(28 / 22);
+  --text-h4--font-weight: 400;
+
+  --text-h5: 18px;
+  --text-h5--line-height: calc(22 / 18);
+  --text-h5--font-weight: 600;
+  --text-h5--letter-spacing: 0.02em;
+
+  /* Body scale (Body 1 is the document default; 2 and 3 are opt-in). */
+  --text-body-1: 18px;
+  --text-body-1--line-height: calc(24 / 18);
+  --text-body-1--font-weight: 400;
+
+  --text-body-2: 16px;
+  --text-body-2--line-height: calc(19 / 16);
+  --text-body-2--font-weight: 400;
+
+  --text-body-3: 12px;
+  --text-body-3--line-height: calc(15 / 12);
+  --text-body-3--font-weight: 400;
+
+  /*
+   * Brand vertical rhythm — three values, semantic intent.
+   *
+   *   --spacing-module  (120px / 7.5rem)
+   *     Top + bottom padding of a major page section ("module") to
+   *     create consistent gaps between modules. Use as `py-module`,
+   *     `pt-module`, `pb-module` on the outer <section>.
+   *
+   *   --spacing-element (90px / 5.625rem)
+   *     Internal spacing inside a module — between a headline and the
+   *     row of content beneath it, between an image and the next
+   *     element below it, etc. Use as `mt-element`, `mb-element`, etc.
+   *
+   *   40px (no custom token — the default `gap-x-10` / `mt-10` etc.
+   *   already resolve to 40px since the Tailwind v4 spacing scale uses
+   *   0.25rem units, and 10 * 0.25rem = 2.5rem = 40px). This is the
+   *   "tight" spacing used between text and an inline CTA, or as the
+   *   horizontal gutter between grid columns.
+   *
+   * Designer-supplied per-section overrides (e.g. the ABF page's
+   * 90px module padding, which the spec calls out explicitly) are
+   * fine — write them as arbitrary values (`py-[90px]`) so they read
+   * as "intentional deviation" rather than getting swept into the
+   * standard rhythm token. If a deviation repeats three times, it's
+   * earning a token of its own.
+   *
+   * Grid system:
+   *   Max content width: 1280px — Tailwind's `max-w-7xl` (80rem)
+   *   already lands on this value; no custom container token needed.
+   *   Pair with `mx-auto` to center, and use `gap-x-10` (40px) for
+   *   the canonical column gutter. The outer <section> still extends
+   *   edge-to-edge (background fills the viewport); only the inner
+   *   content wrapper is constrained.
+   */
+  --spacing-module: 7.5rem;
+  --spacing-element: 5.625rem;
+}
+
+:root {
+  /* Reading-width measure for prose blocks; not a brand token, layout-only. */
+  --measure: 38rem;
+}
+
+@layer base {
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-weight: var(--text-body-1--font-weight);
+    font-size: var(--text-body-1);
+    line-height: var(--text-body-1--line-height);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /*
+   * Reset default browser margins on heading tags. We want heading
+   * semantics WITHOUT inheriting browser-default margin-block, because
+   * we apply heading styling to nav/footer/UI elements where the
+   * default 1em+ margins would break layout. Per-context spacing
+   * should be set explicitly via layout utilities (mt-*, mb-*, gap-*).
+   */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 0;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+  }
+
+  h1 {
+    font-size: var(--text-h1);
+    line-height: var(--text-h1--line-height);
+    font-weight: var(--text-h1--font-weight);
+  }
+
+  h2 {
+    font-size: var(--text-h2);
+    line-height: var(--text-h2--line-height);
+    font-weight: var(--text-h2--font-weight);
+  }
+
+  h3 {
+    font-size: var(--text-h3);
+    line-height: var(--text-h3--line-height);
+    font-weight: var(--text-h3--font-weight);
+  }
+
+  h4 {
+    font-size: var(--text-h4);
+    line-height: var(--text-h4--line-height);
+    font-weight: var(--text-h4--font-weight);
+  }
+
+  /*
+   * H5 = eyebrow / label treatment. Explicitly uses --font-sans so it stays
+   * Montserrat regardless of the future New Science swap on --font-display.
+   * The 0.02em tracking corresponds to "20" in Figma/Adobe (1/1000 em units).
+   */
+  h5 {
+    font-family: var(--font-sans);
+    font-size: var(--text-h5);
+    line-height: var(--text-h5--line-height);
+    font-weight: var(--text-h5--font-weight);
+    letter-spacing: var(--text-h5--letter-spacing);
+    text-transform: uppercase;
+  }
+
+  a {
+    color: var(--color-link);
+    text-underline-offset: 0.15em;
+  }
+
+  a:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+}
