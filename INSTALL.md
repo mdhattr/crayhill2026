@@ -2,7 +2,7 @@
 
 This is the living install / deploy runbook for the Crayhill rebrand. It grows with the project — every change that adds a dependency, env var, build step, or system requirement updates this file in the same commit.
 
-> **Status (current):** Frontend scaffold (React + Vite + TS + Tailwind v4 + React Router + brand type scale with both fonts live — Montserrat self-hosted via `@fontsource`, New Science via Adobe Fonts / Typekit + global `TopNav`) + PHP API hello-world (`GET /api/v1/health`) + MariaDB schema `crayhill` and least-privilege app user `crayhill_app` provisioned via migrations on RDS + designer-delivered brand assets staged in `assets/` and served via Vite's `publicDir`. Production deploy still pending — that section grows as the work lands.
+> **Status (current):** Frontend scaffold (React + Vite + TS + Tailwind v4 + React Router + brand type scale with both fonts live — Montserrat self-hosted via `@fontsource`, New Science via Adobe Fonts / Typekit + global `TopNav`) + PHP API hello-world (`GET /api/v1/health`) + MariaDB schema `crayhill` and least-privilege app user `crayhill_app` provisioned via migrations on RDS + designer-delivered brand assets staged in `assets/` and served via Vite's `publicDir`. The static frontend `dist/` is now deployed to an Amazon Linux 2023 EC2 instance and served over plain HTTP by Apache (see "EC2 deployment"). API reverse-proxy and HTTPS are still pending — those sections grow as the work lands.
 
 ---
 
@@ -619,21 +619,155 @@ The two operations below are **already done** in the current dev environment; th
 
 ## EC2 deployment
 
-*(Not yet applicable.)*
+> **Status (current):** Static frontend only. The React `dist/` is built on the box and served by **Apache (httpd)** over plain HTTP at the instance's public IP. The PHP API (PHP-FPM + `/api` reverse proxy) and HTTPS (certbot) are **not yet wired up** — HTTPS in particular needs a real domain pointed at the box first, since Let's Encrypt won't issue a certificate for a bare IP. Those sections grow here when that work lands.
 
-When the deploy lands, this section will document, in order: provisioning, web server config (vhost example), PHP-FPM config, SSL via certbot, file paths and permissions, where the React `dist/` is served from, how the API is reverse-proxied, log locations, and restart commands.
+The box is **Amazon Linux 2023**. All commands below run **on the EC2 instance** over SSH. Paths assume the repo is cloned at `~/crayhillRebrand` (adjust if yours differs).
+
+### Why a dedicated docroot
+
+The build is served from `/var/www/crayhill`, **not** from the repo's `frontend/dist/` in your home directory. Apache runs as the `apache` user, which can't traverse `/home/ec2-user` by default (directory permissions + SELinux), so pointing `DocumentRoot` at the home dir leads to 403s. A dedicated docroot under `/var/www/` sidesteps that and makes redeploys a single `cp`.
+
+The build itself is self-contained: `frontend/vite.config.ts` uses the default `base: '/'` and `publicDir: '../assets'`, so brand assets (logos, icons, images) are already copied into `dist/`. Nothing outside `dist/` needs to ship.
+
+### 1. Install and start Apache (run once)
+
+```sh
+sudo dnf install -y httpd
+sudo systemctl enable --now httpd
+```
+
+### 2. Deploy the build to the docroot
+
+```sh
+sudo mkdir -p /var/www/crayhill
+sudo cp -r ~/crayhillRebrand/frontend/dist/. /var/www/crayhill/
+sudo chown -R apache:apache /var/www/crayhill
+```
+
+If SELinux is enforcing (check with `getenforce`), restore the web-content file context so Apache is allowed to read the files:
+
+```sh
+sudo restorecon -R /var/www/crayhill
+```
+
+### 3. Virtual host with SPA fallback (run once)
+
+The site is a single-page app: React Router handles routing client-side, so any URL that isn't a real file on disk (e.g. `/who-we-are`) must be served `index.html` so the router can take over. Apache's `FallbackResource` is the clean idiom for this — real assets (`/assets/*.js`, `/images/*`) are still served directly; only non-matching paths fall through to the SPA entrypoint.
+
+Create `/etc/httpd/conf.d/crayhill.conf`:
+
+```apache
+<VirtualHost *:80>
+    DocumentRoot /var/www/crayhill
+
+    <Directory /var/www/crayhill>
+        Require all granted
+        # React Router: send unknown paths to the SPA entrypoint
+        FallbackResource /index.html
+    </Directory>
+
+    ErrorLog  /var/log/httpd/crayhill_error.log
+    CustomLog /var/log/httpd/crayhill_access.log combined
+</VirtualHost>
+```
+
+Validate and reload:
+
+```sh
+sudo apachectl configtest   # expect: Syntax OK
+sudo systemctl reload httpd
+```
+
+Amazon Linux ships a default `welcome.conf` that can shadow the docroot with the Apache test page. If you see that page instead of the site, disable it (run once):
+
+```sh
+sudo mv /etc/httpd/conf.d/welcome.conf /etc/httpd/conf.d/welcome.conf.disabled
+sudo systemctl reload httpd
+```
+
+### 4. Smoke test on the box
+
+```sh
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost/            # 200
+curl -s http://localhost/ | grep -o '<title>.*</title>'              # the page title
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost/who-we-are # 200 via FallbackResource
+```
+
+### 5. Open port 80 in the security group
+
+AWS Console → **EC2** → the instance → **Security** tab → click its security group → **Inbound rules** → **Edit inbound rules** → **Add rule**:
+
+- Type: **HTTP** (auto-fills TCP / port 80)
+- Source: **Anywhere-IPv4** (`0.0.0.0/0`) for a public site, or **My IP** while it's still unreleased brand work
+- Description: `crayhill http`
+
+Amazon Linux 2023 does not run `firewalld` by default, so the security group is the only gate. If `sudo systemctl is-active firewalld` reports `active`, also open it at the host:
+
+```sh
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --reload
+```
+
+### 6. Browse to it
+
+```sh
+curl -s http://checkip.amazonaws.com   # the instance's public IP
+```
+
+Open `http://<that-IP>/` in a browser.
+
+### Log locations
+
+- Access log: `/var/log/httpd/crayhill_access.log`
+- Error log: `/var/log/httpd/crayhill_error.log`
+- Service status / restart: `sudo systemctl status httpd`, `sudo systemctl reload httpd`
 
 ---
 
 ## First-time deploy checklist
 
-*(Filled in once the first real deploy is performed.)*
+Ordered steps for the very first deploy onto a fresh Amazon Linux 2023 EC2 box. Static frontend only (see "EC2 deployment" above for full detail).
+
+1. SSH into the instance.
+2. Install git and Node (LTS) if not already present, then clone the repo to `~/crayhillRebrand`.
+3. Build the frontend:
+   ```sh
+   cd ~/crayhillRebrand/frontend
+   npm ci
+   npm run build
+   ```
+4. Install Apache: `sudo dnf install -y httpd && sudo systemctl enable --now httpd`.
+5. Create the docroot and copy the build:
+   ```sh
+   sudo mkdir -p /var/www/crayhill
+   sudo cp -r ~/crayhillRebrand/frontend/dist/. /var/www/crayhill/
+   sudo chown -R apache:apache /var/www/crayhill
+   sudo restorecon -R /var/www/crayhill   # if SELinux is enforcing
+   ```
+6. Create `/etc/httpd/conf.d/crayhill.conf` (vhost with `FallbackResource`), then `sudo apachectl configtest && sudo systemctl reload httpd`.
+7. Disable `welcome.conf` if the Apache test page shows instead of the site.
+8. Open inbound port 80 in the instance's security group.
+9. Smoke test (`curl http://localhost/`) and confirm in a browser at `http://<public-ip>/`.
 
 ---
 
 ## Routine deploy checklist
 
-*(Filled in once the routine deploy flow is established.)*
+Steps for every subsequent deploy of the static frontend after the box is already provisioned.
+
+```sh
+cd ~/crayhillRebrand
+git pull
+cd frontend
+npm ci                                          # only needed when dependencies changed
+npm run build
+sudo cp -r ~/crayhillRebrand/frontend/dist/. /var/www/crayhill/
+sudo chown -R apache:apache /var/www/crayhill
+sudo restorecon -R /var/www/crayhill            # if SELinux is enforcing
+sudo systemctl reload httpd
+```
+
+Then re-run the smoke test and confirm in a browser. Apache config (`crayhill.conf`) only changes when the deploy topology changes, not on a routine content/build deploy.
 
 ---
 
