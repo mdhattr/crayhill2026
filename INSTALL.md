@@ -621,7 +621,7 @@ The two operations below are **already done** in the current dev environment; th
 
 > **Status (current):** Static frontend only. The React `dist/` is built on the box and served by **Apache (httpd)** over plain HTTP at the instance's public IP. The PHP API (PHP-FPM + `/api` reverse proxy) and HTTPS (certbot) are **not yet wired up** — HTTPS in particular needs a real domain pointed at the box first, since Let's Encrypt won't issue a certificate for a bare IP. Those sections grow here when that work lands.
 
-The box is **Amazon Linux 2023**. All commands below run **on the EC2 instance** over SSH. On the current box the repo is cloned at `/var/www/crayhill22026` (the path is machine-specific — substitute your own if it differs).
+The box is **Amazon Linux 2023**. All commands below run **on the EC2 instance** over SSH. On the current box the repo is cloned at `/var/www/crayhill2026` (the path is machine-specific — substitute your own if it differs).
 
 ### Why a dedicated docroot
 
@@ -640,7 +640,7 @@ sudo systemctl enable --now httpd
 
 ```sh
 sudo mkdir -p /var/www/crayhill
-sudo cp -r /var/www/crayhill22026/frontend/dist/. /var/www/crayhill/
+sudo cp -r /var/www/crayhill2026/frontend/dist/. /var/www/crayhill/
 sudo chown -R apache:apache /var/www/crayhill
 ```
 
@@ -729,10 +729,10 @@ Open `http://<that-IP>/` in a browser.
 Ordered steps for the very first deploy onto a fresh Amazon Linux 2023 EC2 box. Static frontend only (see "EC2 deployment" above for full detail).
 
 1. SSH into the instance.
-2. Install git and Node (LTS) if not already present, then clone the repo (on the current box it lives at `/var/www/crayhill22026`).
+2. Install git and Node (LTS) if not already present, then clone the repo (on the current box it lives at `/var/www/crayhill2026`).
 3. Build the frontend:
    ```sh
-   cd /var/www/crayhill22026/frontend
+   cd /var/www/crayhill2026/frontend
    npm ci
    npm run build
    ```
@@ -740,7 +740,7 @@ Ordered steps for the very first deploy onto a fresh Amazon Linux 2023 EC2 box. 
 5. Create the docroot and copy the build:
    ```sh
    sudo mkdir -p /var/www/crayhill
-   sudo cp -r /var/www/crayhill22026/frontend/dist/. /var/www/crayhill/
+   sudo cp -r /var/www/crayhill2026/frontend/dist/. /var/www/crayhill/
    sudo chown -R apache:apache /var/www/crayhill
    sudo restorecon -R /var/www/crayhill   # if SELinux is enforcing
    ```
@@ -756,12 +756,12 @@ Ordered steps for the very first deploy onto a fresh Amazon Linux 2023 EC2 box. 
 Steps for every subsequent deploy of the static frontend after the box is already provisioned.
 
 ```sh
-cd /var/www/crayhill22026
+cd /var/www/crayhill2026
 git pull
 cd frontend
 npm ci                                          # only needed when dependencies changed
 npm run build
-sudo cp -r /var/www/crayhill22026/frontend/dist/. /var/www/crayhill/
+sudo cp -r /var/www/crayhill2026/frontend/dist/. /var/www/crayhill/
 sudo chown -R apache:apache /var/www/crayhill
 sudo restorecon -R /var/www/crayhill            # if SELinux is enforcing
 sudo systemctl reload httpd
