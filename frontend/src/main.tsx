@@ -17,6 +17,9 @@ import '@fontsource/montserrat/600.css'
 import '@fontsource/montserrat/600-italic.css'
 
 import '@/styles/global.css'
+import { initChunkLoadRecovery } from '@/lib/chunk-load-recovery'
+
+initChunkLoadRecovery()
 
 const rootElement = document.getElementById('root')
 if (!rootElement) {

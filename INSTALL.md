@@ -915,9 +915,18 @@ Then re-run the smoke test and confirm in a browser. Apache config (`crayhill.co
 
 > Add an entry here every time we hit a real failure mode and figure out the fix.
 
+- **`Failed to fetch dynamically imported module` / `edit-*.js` on EC2 after a deploy.** The browser is loading a **stale JavaScript chunk** from before the last `npm run deploy`. Each build hashes filenames (`edit-Dci8gSFU.js`, etc.); an old tab or cached bundle still requests the previous hash. Apache was also returning `index.html` (HTML) for missing `/assets/*` URLs, which breaks `import()`.
+  1. **Immediate fix:** hard refresh the page (`Cmd+Shift+R` / `Ctrl+Shift+R`) or open the site in a private window.
+  2. **Permanent fix (code):** pull latest, redeploy, and re-apply the vhost so `index.html` is `no-cache` and missing `/assets/*` returns 404 instead of HTML:
+     ```sh
+     bash /var/www/crayhill2026/scripts/setup-api-ec2.sh   # copies config/httpd/crayhill.conf
+     cd /var/www/crayhill2026/frontend && npm run deploy
+     ```
+  3. **Verify:** `curl -sI http://localhost/assets/edit-Dci8gSFU.js` should show `Content-Type: application/javascript`. A bogus hash should return `404`, not `200 text/html`.
+  The app also auto-reloads once on `vite:preloadError` after deploys (`frontend/src/lib/chunk-load-recovery.ts`).
 - **News & Insights / Careers show no articles or jobs (empty or error state).** The frontend calls `/api/v1/news` and `/api/v1/careers`. Diagnose in order:
   1. **Local dev:** Is `npm run dev:api` running in a second terminal? Vite proxies `/api` to `127.0.0.1:8000`; without the PHP server you get `[vite] http proxy error ... ECONNREFUSED` and the pages fail.
-  2. **EC2:** Did you run `bash /var/www/crayhill2026/scripts/setup-api-ec2.sh` once? Until PHP-FPM is wired, Apache's SPA `FallbackResource` returns `index.html` for `/api/v1/*` — the browser can't parse that as JSON.
+  2. **EC2:** Did you run `bash /var/www/crayhill2026/scripts/setup-api-ec2.sh` once? Until PHP-FPM is wired, Apache returns `index.html` for `/api/v1/*` — the browser can't parse that as JSON.
   3. **Quick check on the box:**
      ```sh
      curl -s http://localhost/api/v1/health | head -c 200
