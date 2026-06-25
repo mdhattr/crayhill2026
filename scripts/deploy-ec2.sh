@@ -37,7 +37,12 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # --- Phase 1: pull + install, then re-exec the updated script ----------------
 if [ "${CRAYHILL_DEPLOY_PULLED:-}" != "1" ] && [ "${CRAYHILL_SKIP_PULL:-}" != "1" ]; then
   echo "==> git pull (fetch + merge) in $REPO_ROOT"
-  git -C "$REPO_ROOT" pull
+  # --no-rebase: reconcile via merge (modern Git refuses to pick a strategy on
+  #   divergent branches and aborts with "Need to specify how to reconcile").
+  # --no-edit: take the default merge commit message instead of opening $EDITOR,
+  #   which would hang a non-interactive deploy.
+  # If a merge conflict arises, `set -e` aborts the deploy before publishing.
+  git -C "$REPO_ROOT" pull --no-rebase --no-edit
 
   echo "==> npm ci in $REPO_ROOT/frontend"
   ( cd "$REPO_ROOT/frontend" && npm ci )
