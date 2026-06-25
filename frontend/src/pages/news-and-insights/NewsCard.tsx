@@ -17,9 +17,11 @@ import { resolveNewsImage } from '@/lib/news-image'
  *   - Image: slight zoom-in on hover; posts older than two years (or without a
  *     curated image) show a neutral "No image" placeholder instead.
  *
- * `variant` only controls the image aspect ratio: `lead` is the large 4:3 card
- * at the top-left of the index; `secondary` is the 16:9 card used everywhere
- * else (index right column and the detail sidebar).
+ * `variant` controls the image sizing: `secondary` is the fixed 16:9 card used
+ * in the index right column and the detail sidebar. `lead` is the large card
+ * at the top-left of the index — 4:3 on mobile, but on desktop (lg) it becomes
+ * a full-height flex column so it matches the height of the stacked right
+ * column, with the image growing taller to fill the extra space.
  */
 
 type NewsCardProps = {
@@ -35,27 +37,35 @@ export function NewsCard({
   showExcerpt = true,
 }: NewsCardProps) {
   const image = resolveNewsImage(article.image, article.date)
-  const aspect = variant === 'lead' ? 'aspect-[4/3]' : 'aspect-[16/9]'
+  const isLead = variant === 'lead'
+
+  // The lead card fills its (stretched) grid cell on desktop: the <article>
+  // becomes a full-height flex column and the media box flex-grows so the
+  // image absorbs whatever height the right column dictates. On mobile it
+  // falls back to the fixed 4:3 ratio. Secondary cards stay a fixed 16:9.
+  const mediaBoxClass = isLead
+    ? 'aspect-[4/3] lg:aspect-auto lg:min-h-0 lg:flex-1'
+    : 'aspect-[16/9]'
 
   return (
     <article
       className={
         'group relative ' +
+        (isLead ? 'flex h-full flex-col ' : '') +
         'focus-within:outline focus-within:outline-2 ' +
         'focus-within:outline-offset-4 focus-within:outline-accent-navy'
       }
     >
       {/* overflow-hidden clips the hover zoom so the image grows within its box */}
-      <div className="overflow-hidden rounded-image">
+      <div className={'overflow-hidden rounded-image ' + mediaBoxClass}>
         {image ? (
           <img
             src={image}
             alt=""
             loading="lazy"
             className={
-              'block w-full object-cover ' +
-              aspect +
-              ' transition-transform duration-300 ease-out ' +
+              'block h-full w-full object-cover ' +
+              'transition-transform duration-300 ease-out ' +
               'group-hover:scale-105 ' +
               'motion-reduce:transition-none motion-reduce:group-hover:scale-100'
             }
@@ -63,11 +73,7 @@ export function NewsCard({
         ) : (
           // Posts older than two years (or with no curated image yet) show a
           // neutral placeholder rather than a hero image — designer policy.
-          <div
-            className={
-              'flex w-full items-center justify-center bg-paper-alt ' + aspect
-            }
-          >
+          <div className="flex h-full w-full items-center justify-center bg-paper-alt">
             <span className="text-body-3 uppercase tracking-wider text-muted-soft">
               No image
             </span>
