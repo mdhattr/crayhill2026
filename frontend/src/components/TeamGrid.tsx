@@ -1,5 +1,7 @@
 import { NavLink } from 'react-router-dom'
 
+import { CtaChevron } from '@/components/CtaChevron'
+
 /**
  * One person rendered as a card. Shape is intentionally narrow:
  *   slug      Appended to `bioRoutePrefix` to build the bio route.
@@ -30,33 +32,6 @@ export type TeamGridProps = {
    * pages don't exist yet — TODO(routes) below.
    */
   bioRoutePrefix: string
-}
-
-/**
- * Right-pointing chevron prefix for the "View Bio" CTA. Stroke uses
- * `currentColor` so the chevron inherits its parent's text color —
- * one group-hover rule on the card flips both the label and the
- * chevron from accent-blue to accent-green without separate wiring.
- * Mirrors the chevron in <NewsInsights /> on the homepage; if we
- * grow a third use, promote both to a shared <CtaChevron /> module.
- */
-function CtaChevron() {
-  return (
-    <svg
-      width="0.7em"
-      height="1em"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="inline-block shrink-0"
-    >
-      <polyline points="9 6 15 12 9 18" />
-    </svg>
-  )
 }
 
 /**

@@ -1,4 +1,5 @@
 import { Link, NavLink, useParams } from 'react-router-dom'
+import { CtaChevron } from '@/components/CtaChevron'
 import { MaskedIcon } from '@/components/MaskedIcon'
 import { PageHead } from '@/components/PageHead'
 import { TEAM_BIOS } from '@/data/team-bios'
@@ -59,32 +60,6 @@ function EmailIcon() {
     >
       <rect x="2.5" y="4.5" width="19" height="15" rx="1.5" />
       <polyline points="3 6 12 13 21 6" />
-    </svg>
-  )
-}
-
-/**
- * Left-pointing chevron prefix for the "Team" back link. Same stroke
- * weight + currentColor as the other chevrons so it picks up the link's
- * accent → accent-green hover transition. Sized up (1.25em tall vs the
- * 1em CTA chevrons) so on the body-1 back-link text it reads at roughly
- * the same height as the larger nav carets, per design feedback.
- */
-function BackChevron() {
-  return (
-    <svg
-      width="0.9em"
-      height="1.25em"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="inline-block shrink-0"
-    >
-      <polyline points="15 6 9 12 15 18" />
     </svg>
   )
 }
@@ -258,7 +233,7 @@ export default function BioPage() {
                       'focus-visible:text-accent-green focus-visible:outline-none'
                     }
                   >
-                    <BackChevron />
+                    <CtaChevron direction="left" />
                     Team
                   </NavLink>
                 </div>
