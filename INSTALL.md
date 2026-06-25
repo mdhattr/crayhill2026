@@ -925,6 +925,25 @@ Then re-run the smoke test and confirm in a browser. Apache config (`crayhill.co
      ```
      Expect JSON with `"database":{"connected":true,...}`. If you see `<!doctype html`, the API is not wired. If JSON shows `"connected":false`, see the RDS troubleshooting entries below.
 - **`npm run deploy` prints `WARNING: /api/v1/health returned HTML`.** Same as (2) above — run `scripts/setup-api-ec2.sh` on the EC2 instance after provisioning `.config/secrets.env`.
+- **`GET /api/v1/health` returns HTTP 500 (Content-Type: text/html) after `setup-api-ec2.sh`.** PHP-FPM is wired but the request fails before JSON is emitted — usually secrets permissions or the FPM socket path. Diagnose on the box:
+  ```sh
+  # Env loader must succeed as the apache user (same user PHP-FPM uses)
+  sudo -u apache php -r "require '/var/www/crayhill2026/api/lib/env.php'; echo env('APP_ENV'), PHP_EOL;"
+  ls -la /var/www/crayhill2026/.config/
+  ls -la /run/php-fpm/
+  grep listen /etc/php-fpm.d/www.conf
+  sudo tail -30 /var/log/httpd/crayhill_error.log
+  ```
+  **Fix (most common):** the `.config/` directory itself must be traversable by `apache`, not just `secrets.env`. Re-run the setup script from a current repo pull (it sets `.config/` to `750` + group `apache`, labels the whole dir under SELinux, and substitutes the live FPM socket into the vhost). Manual equivalent:
+  ```sh
+  sudo chgrp apache /var/www/crayhill2026/.config
+  sudo chmod 750 /var/www/crayhill2026/.config
+  sudo chown ec2-user:apache /var/www/crayhill2026/.config/secrets.env
+  sudo chmod 640 /var/www/crayhill2026/.config/secrets.env
+  sudo chcon -R -t httpd_sys_content_t /var/www/crayhill2026/.config   # if SELinux enforcing
+  bash /var/www/crayhill2026/scripts/setup-api-ec2.sh
+  ```
+  Expect `GET /api/v1/health` → HTTP 200 with JSON. `"database":{"connected":false,...}` means env is fine but RDS is unreachable — see the RDS entries below.
 - **`npm install` fails inside `frontend/` with `ENOENT package.json` from the repo root.** You ran `npm install` from a shell that wasn't actually `cd`'d into `frontend/`. Verify with `pwd` first; npm walks **up** the tree looking for `package.json` and will report the topmost path it tried.
 - **`tsc -b` fails with `error TS5101: Option 'baseUrl' is deprecated`.** TypeScript 6 deprecated `baseUrl`. Use `paths` alone with paths relative to the tsconfig file (already configured this way in `frontend/tsconfig.app.json`).
 - **Vite dev server says "Port 5173 is in use" and picks 5174.** Usually a previous `vite` process didn't fully release the port. Find and kill it: `lsof -ti:5173 | xargs kill`. If nothing's listening but the port is still claimed, give it ~30 seconds for the OS to clear `TIME_WAIT` state, or just use the new port.

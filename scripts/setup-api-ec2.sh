@@ -20,6 +20,8 @@ CRAYHILL_REPO="${CRAYHILL_REPO:-$REPO_ROOT}"
 DOCROOT="${CRAYHILL_DOCROOT:-/var/www/crayhill}"
 CONF_SRC="$REPO_ROOT/config/httpd/crayhill.conf"
 CONF_DEST="/etc/httpd/conf.d/crayhill.conf"
+SECRETS_FILE="$CRAYHILL_REPO/.config/secrets.env"
+CONFIG_DIR="$CRAYHILL_REPO/.config"
 
 echo "==> installing PHP-FPM and MySQL PDO extension"
 sudo dnf install -y php-fpm php-mysqlnd php-cli
@@ -27,28 +29,54 @@ sudo dnf install -y php-fpm php-mysqlnd php-cli
 echo "==> enabling php-fpm and httpd"
 sudo systemctl enable --now php-fpm
 
-if [ ! -r "$CRAYHILL_REPO/.config/secrets.env" ]; then
-  echo "ERROR: $CRAYHILL_REPO/.config/secrets.env not found or not readable." >&2
+if [ ! -f "$SECRETS_FILE" ]; then
+  echo "ERROR: $SECRETS_FILE not found." >&2
   echo "Provision secrets on the box before running this script (see INSTALL.md)." >&2
   exit 1
 fi
 
 echo "==> allowing apache (php-fpm) to read secrets"
-# Group-readable by apache; owner stays the deploy user.
-sudo chown "$(whoami):apache" "$CRAYHILL_REPO/.config/secrets.env"
-sudo chmod 640 "$CRAYHILL_REPO/.config/secrets.env"
+# PHP-FPM runs as apache. realpath() needs execute on every parent directory,
+# not just read on the file — a 700 .config/ dir causes HTTP 500 even when
+# secrets.env is group-readable.
+sudo chgrp apache "$CONFIG_DIR"
+sudo chmod 750 "$CONFIG_DIR"
+sudo chown "$(whoami):apache" "$SECRETS_FILE"
+sudo chmod 640 "$SECRETS_FILE"
+
+PHP_FPM_SOCKET="${PHP_FPM_SOCKET:-}"
+if [ -z "$PHP_FPM_SOCKET" ] && [ -f /etc/php-fpm.d/www.conf ]; then
+  PHP_FPM_SOCKET="$(grep -E '^\s*listen\s*=' /etc/php-fpm.d/www.conf | head -1 | sed -E 's/^[[:space:]]*listen[[:space:]]*=[[:space:]]*//' | tr -d ' ')"
+fi
+PHP_FPM_SOCKET="${PHP_FPM_SOCKET:-/run/php-fpm/www.sock}"
+
+if [ ! -S "$PHP_FPM_SOCKET" ]; then
+  echo "ERROR: PHP-FPM socket not found at $PHP_FPM_SOCKET." >&2
+  echo "Check: ls -la /run/php-fpm/  and  grep listen /etc/php-fpm.d/www.conf" >&2
+  exit 1
+fi
+echo "    PHP-FPM socket: $PHP_FPM_SOCKET"
+
+echo "==> verifying env loader as apache user"
+if ! sudo -u apache php -r "require '$CRAYHILL_REPO/api/lib/env.php'; echo env('APP_ENV', 'unknown'), PHP_EOL;"; then
+  echo "ERROR: apache user cannot load .config/secrets.env (see above)." >&2
+  echo "Fix permissions/SELinux on $CONFIG_DIR and retry." >&2
+  exit 1
+fi
 
 echo "==> installing Apache vhost ($CONF_DEST)"
 if [ ! -f "$CONF_SRC" ]; then
   echo "ERROR: missing $CONF_SRC — pull the latest repo and retry." >&2
   exit 1
 fi
-sed "s|@CRAYHILL_REPO@|$CRAYHILL_REPO|g" "$CONF_SRC" | sudo tee "$CONF_DEST" >/dev/null
+sed -e "s|@CRAYHILL_REPO@|$CRAYHILL_REPO|g" \
+    -e "s|@PHP_FPM_SOCKET@|$PHP_FPM_SOCKET|g" \
+    "$CONF_SRC" | sudo tee "$CONF_DEST" >/dev/null
 
 if command -v getenforce >/dev/null 2>&1 && [ "$(getenforce)" = "Enforcing" ]; then
   echo "==> SELinux: label api tree and secrets for httpd"
   sudo chcon -R -t httpd_sys_content_t "$CRAYHILL_REPO/api"
-  sudo chcon -t httpd_sys_content_t "$CRAYHILL_REPO/.config/secrets.env"
+  sudo chcon -R -t httpd_sys_content_t "$CONFIG_DIR"
 fi
 
 echo "==> validating Apache config"
@@ -64,9 +92,13 @@ HEALTH_CT="$(curl -sI http://localhost/api/v1/health | awk 'tolower($1)=="conten
 
 echo "    GET /api/v1/health -> HTTP $HEALTH_CODE (Content-Type: ${HEALTH_CT:-unknown})"
 if [ "$HEALTH_CODE" != "200" ]; then
-  echo "WARNING: health endpoint did not return 200. Check:" >&2
-  echo "  sudo tail -50 /var/log/httpd/crayhill_error.log" >&2
-  echo "  sudo tail -50 /var/log/php-fpm/error.log" >&2
+  echo "WARNING: health endpoint did not return 200. Recent errors:" >&2
+  sudo tail -20 /var/log/httpd/crayhill_error.log 2>/dev/null || true
+  if [ -f /var/log/php-fpm/error.log ]; then
+    sudo tail -20 /var/log/php-fpm/error.log 2>/dev/null || true
+  else
+    sudo journalctl -u php-fpm -n 20 --no-pager 2>/dev/null || true
+  fi
   exit 1
 fi
 
