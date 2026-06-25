@@ -128,10 +128,8 @@ const FOOTER_COLUMNS: ReadonlyArray<ReadonlyArray<FooterTitleBlock>> = [
   ],
 ]
 
-// Crayhill's external LinkedIn profile. Update here when the final URL
-// is confirmed; the rest of the component doesn't need to change.
-const LINKEDIN_URL =
-  'https://www.linkedin.com/company/crayhill-capital-management/'
+// Crayhill company page on LinkedIn.
+const LINKEDIN_URL = 'https://www.linkedin.com/company/crayhill/'
 
 // ---------------------------------------------------------------------------
 // Style fragments
