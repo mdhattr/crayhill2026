@@ -89,7 +89,7 @@ export default function OriginationPlatformsPage() {
                 'md:grid-cols-[3fr_2fr] md:gap-x-10 md:gap-y-0'
               }
             >
-              <div className="group overflow-hidden">
+              <div className="group overflow-hidden rounded-image">
                 <img
                   src="/images/strategies-origin-plat-hero.jpg"
                   alt=""

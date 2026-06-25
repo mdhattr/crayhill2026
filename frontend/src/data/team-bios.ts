@@ -12,8 +12,10 @@
  *   fullTitle     Full title for the bio H5 (uppercased by base
  *                 rule). May be richer than the card's `title`
  *                 (e.g. "Managing Partner | Co-Founder" here vs
- *                 "Co-Founder" on the card). Pipe separator with
- *                 surrounding spaces is the comp convention.
+ *                 "Co-Founder" on the card). Pipe-separated segments
+ *                 use TITLE_SEP (two non-breaking spaces on each side
+ *                 of the bar) so the gap survives HTML whitespace
+ *                 collapsing — plain spaces would render as one.
  *   imageSrc      Path under /images (Vite copies /assets contents
  *                 via publicDir).
  *   email         Optional. When present, the bio renders an
@@ -53,11 +55,16 @@ const LEADERSHIP: '/team/leadership' = '/team/leadership'
 const SIP: '/team/senior-investment-professionals' =
   '/team/senior-investment-professionals'
 
+// Separator for pipe-joined title segments: two non-breaking spaces on each
+// side of the bar. Regular spaces collapse to one in HTML, so \u00a0 is used
+// to keep the requested 2-space gap visible.
+const TITLE_SEP = '\u00a0\u00a0|\u00a0\u00a0'
+
 export const TEAM_BIOS: Readonly<Record<string, TeamBio>> = {
   'josh-eaton': {
     slug: 'josh-eaton',
     name: 'Josh Eaton',
-    fullTitle: 'Managing Partner | Co-Founder',
+    fullTitle: `Managing Partner${TITLE_SEP}Co-Founder`,
     imageSrc: '/images/headshot-josh.jpg',
     email: 'josh.eaton@crayhillcapital.com',
     linkedinUrl: 'https://www.linkedin.com/in/josh-eaton/',
@@ -71,7 +78,7 @@ export const TEAM_BIOS: Readonly<Record<string, TeamBio>> = {
   'carlos-mendez': {
     slug: 'carlos-mendez',
     name: 'Carlos Mendez',
-    fullTitle: 'Managing Partner | Co-Founder',
+    fullTitle: `Managing Partner${TITLE_SEP}Co-Founder`,
     imageSrc: '/images/headshot-carlos.jpg',
     email: 'carlos.mendez@crayhillcapital.com',
     linkedinUrl: 'https://www.linkedin.com/in/carlos-mendez/',
@@ -85,7 +92,7 @@ export const TEAM_BIOS: Readonly<Record<string, TeamBio>> = {
   'joe-thomas': {
     slug: 'joe-thomas',
     name: 'Joe Thomas',
-    fullTitle: 'Managing Director | CFO & CCO',
+    fullTitle: `Managing Director${TITLE_SEP}CFO & CCO`,
     imageSrc: '/images/headshot-joe.jpg',
     email: 'joe.thomas@crayhillcapital.com',
     linkedinUrl: 'https://www.linkedin.com/in/joe-thomas/',
@@ -142,7 +149,7 @@ export const TEAM_BIOS: Readonly<Record<string, TeamBio>> = {
   'shweta-kapadia': {
     slug: 'shweta-kapadia',
     name: 'Shweta Kapadia',
-    fullTitle: 'Managing Director | Origination and Execution of Investments',
+    fullTitle: `Managing Director${TITLE_SEP}Origination and Execution of Investments`,
     imageSrc: '/images/headshot-shweta.jpg',
     email: 'shweta.kapadia@crayhillcapital.com',
     linkedinUrl: 'https://www.linkedin.com/in/shweta-kapadia/',
@@ -156,7 +163,7 @@ export const TEAM_BIOS: Readonly<Record<string, TeamBio>> = {
   'stefan-hoefer': {
     slug: 'stefan-hoefer',
     name: 'Stefan Hoefer',
-    fullTitle: 'Managing Director | Origination, Underwriting, and Execution of Investments',
+    fullTitle: `Managing Director${TITLE_SEP}Origination, Underwriting, and Execution of Investments`,
     imageSrc: '/images/headshot-stefan.jpg',
     email: 'stefan.hoefer@crayhillcapital.com',
     linkedinUrl: 'https://www.linkedin.com/in/stefan-hoefer/',

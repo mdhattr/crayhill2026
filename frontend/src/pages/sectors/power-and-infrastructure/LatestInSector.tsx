@@ -20,14 +20,10 @@
  *   - mobile (< md): stacked, image above text.
  *
  * CTA:
- *   "View all articles" is an *internal* link to the news index —
- *   different from the Origination Platforms SelectTransactions CTA
- *   which was external. Uses <NavLink> for client-side routing.
- *
- *   TODO(routes): the /news destination is a placeholder slug —
- *   confirm the canonical route once the News & Insights index
- *   page is scaffolded. Until that page exists the link 404s into
- *   NotFoundPage, which is acceptable pre-launch.
+ *   "View all articles" is an *internal* link to the news index
+ *   (/news-and-insights) — different from the Origination Platforms
+ *   SelectTransactions CTA which was external. Uses <NavLink> for
+ *   client-side routing.
  *
  * Article data:
  *   The eyebrow text and the featured-article content are hardcoded
@@ -74,7 +70,7 @@ export function LatestInSector() {
             </h2>
             <div className="mt-8">
               <NavLink
-                to="/news"
+                to="/news-and-insights"
                 className={
                   'inline-block rounded bg-accent-green px-6 py-3 ' +
                   'text-body-2 font-semibold uppercase text-white ' +

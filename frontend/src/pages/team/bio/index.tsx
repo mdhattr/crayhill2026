@@ -1,4 +1,5 @@
 import { Link, NavLink, useParams } from 'react-router-dom'
+import { MaskedIcon } from '@/components/MaskedIcon'
 import { PageHead } from '@/components/PageHead'
 import { TEAM_BIOS } from '@/data/team-bios'
 
@@ -45,8 +46,8 @@ import { TEAM_BIOS } from '@/data/team-bios'
 function EmailIcon() {
   return (
     <svg
-      width="20"
-      height="20"
+      width="38"
+      height="38"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -62,46 +63,22 @@ function EmailIcon() {
   )
 }
 
-function LinkedInIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-      className="inline-block shrink-0"
-    >
-      {/*
-       * LinkedIn "in" mark — single-path glyph composed of the
-       * rounded square frame plus the lowercase 'in' shape, drawn
-       * with the even-odd fill rule so the bowls of the letters
-       * read as cut-outs.
-       */}
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M3.5 2h17A1.5 1.5 0 0122 3.5v17a1.5 1.5 0 01-1.5 1.5h-17A1.5 1.5 0 012 20.5v-17A1.5 1.5 0 013.5 2zM8 19V10H5v9h3zM6.5 8.25A1.75 1.75 0 108.3 6.5a1.78 1.78 0 00-1.8 1.75zM19 19v-4.74c0-2.8-1.81-3.66-3.36-3.66a3.11 3.11 0 00-2.7 1.4V10H10v9h3v-4.67a1.74 1.74 0 011.62-1.86c.78 0 1.38.51 1.38 1.93V19h3z"
-      />
-    </svg>
-  )
-}
-
 /**
- * Left-pointing chevron prefix for the "Team" back link. Mirror of
- * the right-chevron used by the team grid card CTAs — same stroke
- * weight + same currentColor so the icon picks up the link's
- * accent → accent-green hover transition.
+ * Left-pointing chevron prefix for the "Team" back link. Same stroke
+ * weight + currentColor as the other chevrons so it picks up the link's
+ * accent → accent-green hover transition. Sized up (1.25em tall vs the
+ * 1em CTA chevrons) so on the body-1 back-link text it reads at roughly
+ * the same height as the larger nav carets, per design feedback.
  */
 function BackChevron() {
   return (
     <svg
-      width="10"
-      height="14"
+      width="0.9em"
+      height="1.25em"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2.5"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -249,13 +226,23 @@ export default function BioPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           aria-label={`${bio.name} on LinkedIn`}
-                          className={
-                            'text-inherit transition-colors duration-150 ' +
-                            'hover:text-accent-green ' +
-                            'focus-visible:text-accent-green focus-visible:outline-none'
-                          }
+                          className="group inline-flex focus-visible:outline-none"
                         >
-                          <LinkedInIcon />
+                          {/*
+                           * Designer-supplied LinkedIn mark, fetched from
+                           * assets and tinted via CSS mask so it inherits the
+                           * same muted → accent-green hover as the rest of the
+                           * contact block. Sized a touch larger than the 20px
+                           * envelope because the asset glyph carries internal
+                           * padding, so this reads at a matching optical size.
+                           */}
+                          <MaskedIcon
+                            src="/icons/icon-linkedin.svg"
+                            className={
+                              'h-[45px] w-[45px] bg-muted-soft transition-colors duration-150 ' +
+                              'group-hover:bg-accent-green group-focus-visible:bg-accent-green'
+                            }
+                          />
                         </a>
                       )}
                     </div>

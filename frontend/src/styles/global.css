@@ -53,6 +53,13 @@
   /* Softer rule for low-emphasis container borders (dropdown panels, etc.). */
   --color-rule-soft: #e8e8e8;
   --color-link: #1a1a1a;
+  /*
+   * Inline hyperlink color inside article body copy (News & Insights detail
+   * page). Distinct from --color-link (near-black, used for nav/structural
+   * links): a muted brand violet for "this is a link within prose". Designer
+   * hex: #6B6ABA (read from the article-template mockup).
+   */
+  --color-hyperlink: #6b6aba;
   /* Brand accent blue (footer titles; likely used elsewhere later). */
   --color-accent: #57a0dd;
   /*
@@ -79,6 +86,19 @@
    * Designer hex: #9AC6EB.
    */
   --color-accent-light: #9ac6eb;
+  /*
+   * Bright cyan used for the horizontal divider rules between rows in the
+   * "Crayhill in the News" list on the News & Insights page. Designer hex:
+   * #0AC6EB (read from the News & Insights mockup — confirm with designer if
+   * the brand sheet differs).
+   */
+  --color-accent-cyan: #0ac6eb;
+  /*
+   * Darker sky-blue used as the hover color for the "Crayhill in the News"
+   * list item titles (the link text deepens from ink to this on hover).
+   * Designer hex: #277AC0 (read from the News & Insights mockup).
+   */
+  --color-accent-strong: #277ac0;
 
   --font-sans:
     'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
@@ -94,12 +114,20 @@
     'new-science', 'Montserrat', -apple-system, BlinkMacSystemFont,
     'Segoe UI', system-ui, 'Helvetica Neue', Arial, sans-serif;
 
-  /* Display scale (H1–H4 use --font-display; H5 explicitly uses --font-sans). */
-  --text-h1: 72px;
+  /*
+   * Display scale (H1–H4 use --font-display; H5 explicitly uses --font-sans).
+   *
+   * H1 and H2 are fluid: they hold the designer's px size (72 / 48) on
+   * roughly tablet-landscape and up, then scale down toward a legible
+   * mobile floor (40 / 30px) so a long headline doesn't dominate a 320px
+   * phone. The line-height tokens are unitless ratios, so they track the
+   * fluid size automatically. H3–H5 are already small enough to stay fixed.
+   */
+  --text-h1: clamp(2.5rem, 1.25rem + 6vw, 4.5rem);
   --text-h1--line-height: calc(76 / 72);
   --text-h1--font-weight: 500;
 
-  --text-h2: 48px;
+  --text-h2: clamp(1.875rem, 1.1rem + 3.8vw, 3rem);
   --text-h2--line-height: calc(52 / 48);
   --text-h2--font-weight: 400;
 
@@ -165,11 +193,44 @@
    */
   --spacing-module: 7.5rem;
   --spacing-element: 5.625rem;
+
+  /*
+   * Corner radius for content imagery. Every photograph (anything served from
+   * /images/) gets this radius — heroes, headshots, sector/transaction grids,
+   * news cards. Logos (/crayhill-r-logo-svg/) and icons (/icons/) live in other
+   * asset folders and are intentionally excluded, so they stay sharp. Applied
+   * via the `img[src*="/images/"]` base rule below; this token also
+   * auto-generates the `rounded-image` utility, which the overflow-hidden
+   * hover-zoom wrappers carry so the rounding isn't clipped square mid-zoom.
+   */
+  --radius-image: 15px;
 }
 
 :root {
   /* Reading-width measure for prose blocks; not a brand token, layout-only. */
   --measure: 38rem;
+}
+
+/*
+ * Tighten the vertical rhythm on phones/small tablets. Tailwind v4 emits the
+ * `*-module` / `*-element` utilities as `var(--spacing-module|element)`, so
+ * redefining the variables here cascades to every `py-module`, `mt-element`,
+ * etc. without touching a single page. Above this width the designer's full
+ * 120px / 90px rhythm applies.
+ *
+ * Values are inlined (not a `--spacing-*-mobile` token) because Tailwind v4
+ * tree-shakes theme variables that don't back a used utility, which would
+ * leave such a token undefined here.
+ *
+ * TODO(brand): the mobile reductions (72px module / 48px element) are a
+ * responsiveness accommodation, not a designer-supplied spec. Confirm the
+ * exact mobile rhythm with the designer.
+ */
+@media (max-width: 767px) {
+  :root {
+    --spacing-module: 4.5rem;
+    --spacing-element: 3rem;
+  }
 }
 
 @layer base {
@@ -253,5 +314,125 @@
   a:focus-visible {
     outline: 2px solid var(--color-ink);
     outline-offset: 3px;
+  }
+
+  /*
+   * Brand corner radius on all content photography. The positive `/images/`
+   * selector targets only files under assets/images, so logos
+   * (/crayhill-r-logo-svg/) and icons (/icons/) are excluded and stay sharp.
+   * Hover-zoom cards also carry `rounded-image` on their overflow-hidden
+   * wrapper so the rounding survives the zoom (an <img> radius alone gets
+   * clipped to square corners when the image scales past the wrapper).
+   */
+  img[src*='/images/'] {
+    border-radius: var(--radius-image);
+  }
+}
+
+/*
+ * Rendered Markdown body for an article (News & Insights detail page).
+ * Minimal, readable defaults — the detail page is a functional placeholder
+ * pending the designer's article-template spec, so this only restores the
+ * list/spacing/link affordances that Tailwind's preflight strips. Revisit
+ * when the real article template lands.
+ */
+@layer components {
+  .news-prose > * + * {
+    margin-top: 1.25rem;
+  }
+
+  .news-prose h2,
+  .news-prose h3,
+  .news-prose h4 {
+    margin-top: 2.5rem;
+  }
+
+  .news-prose a {
+    color: var(--color-hyperlink);
+    text-decoration: underline;
+  }
+
+  .news-prose a:hover {
+    color: var(--color-accent-strong);
+  }
+
+  .news-prose ul {
+    list-style: disc;
+    padding-left: 1.5rem;
+  }
+
+  .news-prose ol {
+    list-style: decimal;
+    padding-left: 1.5rem;
+  }
+
+  .news-prose li + li {
+    margin-top: 0.5rem;
+  }
+
+  .news-prose blockquote {
+    border-left: 3px solid var(--color-rule);
+    padding-left: 1rem;
+    color: var(--color-muted);
+  }
+
+  /* Keep article media/tables from forcing horizontal scroll on phones. */
+  .news-prose img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .news-prose pre {
+    overflow-x: auto;
+  }
+
+  .news-prose table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  /*
+   * Rendered Markdown body for an expanded job posting (Careers page).
+   * Designer spec: "Expanded Text: Body 1, Black" — so this stays at the
+   * inherited body-1 size/color (the panel sets text-ink) with no large
+   * Markdown headings; section labels are authored as bold paragraphs, not
+   * `#` headings. This block only restores list affordances + spacing that
+   * Tailwind preflight strips, plus nested-bullet support (the postings use
+   * two-level lists).
+   */
+  .careers-prose > * + * {
+    margin-top: 1.25rem;
+  }
+
+  .careers-prose ul,
+  .careers-prose ol {
+    padding-left: 1.5rem;
+  }
+
+  .careers-prose ul {
+    list-style: disc;
+  }
+
+  .careers-prose ol {
+    list-style: decimal;
+  }
+
+  .careers-prose ul ul {
+    list-style: circle;
+    margin-top: 0.5rem;
+  }
+
+  .careers-prose li + li {
+    margin-top: 0.5rem;
+  }
+
+  .careers-prose a {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+
+  .careers-prose a:hover {
+    color: var(--color-accent-green);
   }
 }

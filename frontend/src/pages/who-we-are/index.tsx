@@ -59,7 +59,7 @@ export default function WhoWeArePage() {
               of the market.
             </p>
 
-            <div className="group mt-element overflow-hidden">
+            <div className="group mt-element overflow-hidden rounded-image">
               <img
                 src="/images/about-hero.jpg"
                 alt=""

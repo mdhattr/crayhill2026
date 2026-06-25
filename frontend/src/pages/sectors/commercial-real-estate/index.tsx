@@ -106,7 +106,7 @@ export default function CommercialRealEstatePage() {
               developers.
             </h3>
 
-            <div className="group overflow-hidden">
+            <div className="group overflow-hidden rounded-image">
               <img
                 src="/images/sectors-comm-real-estate-hero.jpg"
                 alt=""

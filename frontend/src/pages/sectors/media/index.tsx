@@ -121,7 +121,7 @@ export default function MediaPage() {
                   their long-duration assets with predictable cash flows.
                 </h3>
 
-                <div className="group overflow-hidden">
+                <div className="group overflow-hidden rounded-image">
                   <img
                     src="/images/sectors-media-hero-1.jpg"
                     alt=""
@@ -138,7 +138,7 @@ export default function MediaPage() {
                 </div>
               </div>
 
-              <div className="group overflow-hidden">
+              <div className="group overflow-hidden rounded-image">
                 <img
                   src="/images/sectors-media-hero-2.jpg"
                   alt=""

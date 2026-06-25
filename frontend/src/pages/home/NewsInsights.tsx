@@ -1,5 +1,7 @@
 import { NavLink } from 'react-router-dom'
+import { CtaChevron } from '@/components/CtaChevron'
 import { useInViewOnce } from '@/hooks/useInViewOnce'
+import { formatDate } from '@/lib/format-date'
 
 /**
  * Homepage "News & Insights" section. Three article cards on a white
@@ -89,51 +91,6 @@ const PLACEHOLDER_ARTICLES: ReadonlyArray<Article> = [
 // Slide-up entrance animation tuning. Keep total cascade under ~1s.
 const ANIM_DURATION_MS = 600
 const ANIM_STAGGER_MS = 120
-
-/**
- * Format an ISO YYYY-MM-DD date as "August 14, 2025".
- *
- * Parses from year/month/day parts in local time to avoid the classic
- * `new Date('2025-08-14')` UTC-midnight pitfall, which flips the date back
- * by one day when formatted in negative-offset timezones (e.g. US ET).
- *
- * Locale is fixed to en-US to match the design (Long Month DD, YYYY). When
- * we add i18n this becomes a prop on a date-formatter component.
- */
-function formatDate(iso: string): string {
-  const parts = iso.split('-').map(Number)
-  const [year, month, day] = parts
-  if (!year || !month || !day) return iso
-  return new Date(year, month - 1, day).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
-
-/**
- * Static right-pointing chevron used to prefix "Read More". Inherits color
- * from its text parent via `currentColor`, so the parent's hover color
- * change applies to the icon too without separate handling.
- */
-function CtaChevron() {
-  return (
-    <svg
-      width="10"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="inline-block shrink-0"
-    >
-      <polyline points="9 6 15 12 9 18" />
-    </svg>
-  )
-}
 
 export function NewsInsights() {
   const [gridRef, inView] = useInViewOnce<HTMLDivElement>()

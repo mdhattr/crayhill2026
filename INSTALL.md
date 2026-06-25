@@ -2,7 +2,7 @@
 
 This is the living install / deploy runbook for the Crayhill rebrand. It grows with the project — every change that adds a dependency, env var, build step, or system requirement updates this file in the same commit.
 
-> **Status (current):** Frontend scaffold (React + Vite + TS + Tailwind v4 + React Router + brand type scale with both fonts live — Montserrat self-hosted via `@fontsource`, New Science via Adobe Fonts / Typekit + global `TopNav`) + PHP API hello-world (`GET /api/v1/health`) + MariaDB schema `crayhill` and least-privilege app user `crayhill_app` provisioned via migrations on RDS + designer-delivered brand assets staged in `assets/` and served via Vite's `publicDir`. The static frontend `dist/` is now deployed to an Amazon Linux 2023 EC2 instance and served over plain HTTP by Apache (see "EC2 deployment"). API reverse-proxy and HTTPS are still pending — those sections grow as the work lands.
+> **Status (current):** Frontend scaffold (React + Vite + TS + Tailwind v4 + React Router + brand type scale with both fonts live — Montserrat self-hosted via `@fontsource`, New Science via Adobe Fonts / Typekit + global `TopNav`) + PHP API (`GET /api/v1/health` plus the first real data endpoint, `GET /api/v1/news`) + MariaDB schema `crayhill` with least-privilege app user `crayhill_app` and a seeded `news` table on RDS + designer-delivered brand assets staged in `assets/` and served via Vite's `publicDir`. The **News & Insights** page is the first end-to-end DB-backed feature: TanStack Query + a typed API client in `frontend/src/api/` consume `GET /api/v1/news`. The static frontend `dist/` is deployed to an Amazon Linux 2023 EC2 instance and served over plain HTTP by Apache (see "EC2 deployment"). The PHP API is not yet deployed to EC2 (the box serves static only), so the live News page there has no data until PHP-FPM + the `/api` reverse proxy land — those sections, plus HTTPS, grow as the work lands.
 
 ---
 
@@ -109,7 +109,9 @@ Expected response (DB connectivity may vary depending on your network — see Tr
 }
 ```
 
-> **URL note for local vs. production:** PHP's built-in dev server serves files directly from `api/`, so the local URL is `/v1/health.php`. In production behind Nginx/Apache, the path will be rewritten to the canonical `/api/v1/health` form (no `.php` extension, with `/api` prefix). The frontend's API client should target the canonical form and rely on a base URL setting to differentiate environments.
+> **URL note for local vs. production:** PHP's built-in dev server serves files directly from `api/`, so the local URL is `/v1/health.php`. In production behind Nginx/Apache, the path will be rewritten to the canonical `/api/v1/health` form (no `.php` extension, with `/api` prefix). The frontend's API client targets the canonical `/api/v1/...` form and relies on `VITE_API_BASE_URL` to differentiate environments.
+
+> **Frontend ↔ API in dev:** the Vite dev server proxies `/api` to the local PHP server (`http://localhost:8000`), rewriting the clean URL `/api/v1/<name>` to the file it serves (`/v1/<name>.php`) — see `server.proxy` in `frontend/vite.config.ts`. So to exercise the News & Insights page locally, run **both** `npm run dev` (frontend) **and** `php -S localhost:8000 -t api` (API) in separate terminals, with RDS reachable (see "AWS RDS access for local development"). The page degrades to an error state if the API is down.
 
 ### Frontend scripts
 
@@ -131,6 +133,9 @@ Expected response (DB connectivity may vary depending on your network — see Tr
 | `tailwindcss`                 | 4.2.x              | Styling (utility-first, CSS-first config) |
 | `@tailwindcss/vite`           | 4.2.x              | Tailwind's Vite plugin                   |
 | `react-router-dom`            | 7.14.x             | Client-side routing                      |
+| `@tanstack/react-query`       | 5.101.x            | Server-state fetching/caching for API data (News & Insights and future endpoints). Provider in `frontend/src/App.tsx`. |
+| `react-markdown`              | 10.1.x             | Renders Markdown article bodies on the news detail page. |
+| `remark-gfm`                  | 4.0.x              | GitHub-flavored-Markdown plugin for `react-markdown` (tables, autolinks). |
 | `@fontsource/montserrat`      | latest             | Self-hosted Montserrat woff2 (regular + semi-bold + italics). See **Typography / Fonts** below. |
 | `typescript`                  | 6.0.x              | Type checking                            |
 | `eslint` + plugins            | 10.x               | Linting                                  |
@@ -240,8 +245,8 @@ Canonical record of the brand type scale, taken from the designer's hand-off. Th
 
 | Scale | Element / utility | Typeface (token) | Weight | Size | Line-height | Case |
 | --- | --- | --- | --- | --- | --- | --- |
-| H1 | `<h1>` / `text-h1` | New Science via `--font-display` | Medium / 500 | 72px | 76px | Title Case |
-| H2 | `<h2>` / `text-h2` | New Science via `--font-display` | Regular / 400 | 48px | 52px | Title Case |
+| H1 | `<h1>` / `text-h1` | New Science via `--font-display` | Medium / 500 | 72px desktop, fluid down to 40px on mobile (`clamp(2.5rem, 1.25rem + 6vw, 4.5rem)`) | 76px (ratio 76/72) | Title Case |
+| H2 | `<h2>` / `text-h2` | New Science via `--font-display` | Regular / 400 | 48px desktop, fluid down to 30px on mobile (`clamp(1.875rem, 1.1rem + 3.8vw, 3rem)`) | 52px (ratio 52/48) | Title Case |
 | H3 | `<h3>` / `text-h3` | New Science via `--font-display` | Medium / 500 | 28px | 36px | Title Case |
 | H4 | `<h4>` / `text-h4` | New Science via `--font-display` | Regular / 400 | 22px | 28px | Title Case |
 | H5 | `<h5>` / `text-h5` | Montserrat via `--font-sans` (immune to NS swap) | SemiBold / 600 | 18px | 22px | UPPERCASE, 0.02em tracking |
@@ -251,6 +256,7 @@ Canonical record of the brand type scale, taken from the designer's hand-off. Th
 
 Notes on this scale:
 
+- **H1 and H2 are fluid (responsive).** They hold the designer's px size at roughly tablet-landscape and up, then scale down via `clamp()` toward a legible mobile floor (40px / 30px) so long headlines don't dominate a 320px phone. The line-height tokens are unitless ratios, so they track the fluid size automatically. H3–H5 stay fixed (already small enough for mobile). To restore a fixed size, replace the `clamp(...)` value on `--text-h1` / `--text-h2` with the px size.
 - **Title Case and Sentence case are author conventions, not CSS rules.** CSS only ships `capitalize` (which capitalizes *every* word, including small words like "of", "the" — wrong by AP/Chicago) and `uppercase`. Authors are expected to write headings/copy in correct case directly in JSX. Only H5 has a true CSS transform (`uppercase`).
 - **Tracking conversion.** "20pt tracking" in the design hand-off is the Figma/Adobe convention of 1/1000 em — i.e. `letter-spacing: 0.02em` in CSS. Apply the same ratio when future hand-offs include tracking values.
 - **H1–H4 use `--font-display`**, which resolves to New Science via Adobe Fonts (see "New Science — Adobe Fonts / Typekit" above). If the Typekit CDN is slow or unreachable, the stack falls back through Montserrat at the same numeric weight so headlines stay legible.
@@ -268,8 +274,10 @@ Canonical record of the brand layout system (grid + vertical rhythm), taken from
 | Max content width | 1280px (80rem) | `max-w-7xl` (Tailwind default) | `<div className="mx-auto max-w-7xl">` inside the section. Section background fills viewport edge-to-edge. |
 | Column gutter | 40px (2.5rem) | `gap-x-10` (Tailwind default 10 × 0.25rem) | Horizontal gap between columns in every multi-column grid. |
 | Side padding (below 1280px) | 24px → 40px | `px-6 sm:px-10` | Outer section padding so content doesn't kiss the viewport edge on small screens. |
-| Module top/bottom padding | 120px (7.5rem) | `--spacing-module` → `py-module`, `pt-module`, `pb-module` | Standard padding on the outer `<section>` of a major page module. |
-| Internal element spacing | 90px (5.625rem) | `--spacing-element` → `mt-element`, `mb-element` | Vertical gap inside a module — between headline and content row, between image and the next element. |
+| Module top/bottom padding | 120px (7.5rem) desktop; 72px (4.5rem) below `md` (≤767px) | `--spacing-module` → `py-module`, `pt-module`, `pb-module` | Standard padding on the outer `<section>` of a major page module. The mobile value comes from a `@media (max-width: 767px)` override of the CSS variable in `global.css`, so every `*-module` utility tightens on phones without per-page edits. |
+| Internal element spacing | 90px (5.625rem) desktop; 48px (3rem) below `md` (≤767px) | `--spacing-element` → `mt-element`, `mb-element` | Vertical gap inside a module. Same media-query override as module padding. |
+
+The mobile rhythm reductions (72px / 48px) are a responsiveness accommodation, not a designer-supplied spec — flagged `TODO(brand)` in `global.css`; confirm the exact mobile rhythm with the designer.
 | Tight text/CTA spacing | 40px (2.5rem) | `mt-10` / `gap-y-10` (no custom token; default scale) | Between body copy and an inline CTA, between an article title and a date line, etc. |
 
 Designer-supplied per-section overrides (e.g. the ABF Credit Opportunities page's 90px module top/bottom padding instead of the standard 120px) are written as **arbitrary values** (`py-[90px]`), not as `py-element`, even when the number matches a token. The arbitrary value signals "intentional deviation from the standard rhythm"; the token signals "this is the standard rhythm". Same number, different semantic intent.
@@ -386,10 +394,28 @@ api/
 ├── lib/
 │   ├── env.php                  # single env loader; reads .config/secrets.env
 │   ├── response.php             # respond_ok / respond_error / respond_no_content
-│   └── db.php                   # PDO factory, utf8mb4, TLS-only, prepared statements
+│   ├── db.php                   # PDO factory, utf8mb4, TLS-only, prepared statements
+│   └── migrate.php              # admin-credential DDL runner
+├── migrations/                  # numbered, dated schema migrations
+├── seeds/
+│   ├── news_seed.sql            # committed reproducible seed for the news table
+│   └── careers_seed.sql         # committed reproducible seed for the careers table
 └── v1/
-    └── health.php               # GET /api/v1/health — smoke check
+    ├── health.php               # GET /api/v1/health — smoke check
+    ├── news.php                 # GET /api/v1/news (list) + ?slug=<x> (detail)
+    └── careers.php              # GET /api/v1/careers (list, full body inline)
 ```
+
+### Endpoints
+
+| Method + path | File | Returns |
+| --- | --- | --- |
+| `GET /api/v1/health` | `api/v1/health.php` | Env + DB connectivity smoke check. |
+| `GET /api/v1/news` | `api/v1/news.php` | Published posts, newest first: `{ id, slug, title, author, date, image, excerpt }[]` with `meta.count`. |
+| `GET /api/v1/news?slug=<x>` | `api/v1/news.php` | One published post with full Markdown `content`; `404 NOT_FOUND` if missing/draft. |
+| `GET /api/v1/careers` | `api/v1/careers.php` | Published job postings, in `sort_order`: `{ id, slug, title, location, content }[]` (full Markdown body inline) with `meta.count`. No detail route — the Careers page renders accordions. |
+
+Full response shapes and curl examples live in `docs/data-flow.md` → "News & Insights" and "Careers".
 
 ### Conventions
 
@@ -438,7 +464,13 @@ Single source of truth: **`.config/secrets.env`** at the repo root. Format is `K
 | `DB_ADMIN_PASSWORD`  | Migrations only  | Yes  | RDS admin password. In production, prefer to inject via the deploy environment.        |
 | `ALLOWED_ORIGINS`    | API              | No   | Comma-separated list of origins allowed by CORS. Local dev: `http://localhost:5173`.    |
 
-The frontend currently reads no environment variables. When the API is wired in, a `frontend/.env` will be added with public `VITE_*`-prefixed values only (e.g. `VITE_API_BASE_URL`). Anything `VITE_*`-prefixed ships to the browser, so it must never be a secret.
+### Frontend public variables (`frontend/.env`)
+
+The frontend reads **only** `VITE_*`-prefixed variables, which ship to the browser as plaintext — so they must never hold a secret. `frontend/.env` is gitignored; the committed template is `frontend/.env.example`. Copy it for local dev (`cp frontend/.env.example frontend/.env`).
+
+| Key | Required? | Secret? | Example | Notes |
+| --- | --- | --- | --- | --- |
+| `VITE_API_BASE_URL` | No (defaults to `/api/v1`) | No | `/api/v1` | Base URL the SPA uses to reach the PHP API. Relative by default so the same value works in dev (Vite proxies `/api` → local PHP server) and prod (Apache serves `/api` same-origin). Set to a full origin only for a cross-origin API host. |
 
 ### When adding a new variable
 
@@ -462,7 +494,9 @@ Both users and the schema are created by migrations:
 ```
 api/migrations/
 ├── 2026_04_28_001_create_database.sql       # creates the crayhill schema
-└── 2026_04_28_002_create_app_user.sql       # creates crayhill_app, REQUIRE SSL, least privileges
+├── 2026_04_28_002_create_app_user.sql       # creates crayhill_app, REQUIRE SSL, least privileges
+├── 2026_06_24_003_create_news.sql           # creates the news table (News & Insights)
+└── 2026_06_24_004_create_careers.sql        # creates the careers table (Careers)
 ```
 
 Charset/collation: `utf8mb4 / utf8mb4_unicode_ci`.
@@ -497,8 +531,9 @@ There is currently **no tracking table** for "which migrations have run." Filena
    ```sh
    php api/lib/migrate.php 2026_04_28_002_create_app_user.sql
    ```
-6. Run all subsequent migrations in filename order.
-7. Verify with the health endpoint — `database.selected_schema` should report `"crayhill"` and a separate `CURRENT_USER()` query should return `crayhill_app@%`.
+6. Run all subsequent migrations in filename order (e.g. `php api/lib/migrate.php 2026_06_24_003_create_news.sql`, then `php api/lib/migrate.php 2026_06_24_004_create_careers.sql`).
+7. Seed any content domains that ship with data — currently News & Insights and Careers (see "Seed data" below): load `api/seeds/news_seed.sql` and `api/seeds/careers_seed.sql` via the `mysql` client.
+8. Verify with the health endpoint — `database.selected_schema` should report `"crayhill"` and a separate `CURRENT_USER()` query should return `crayhill_app@%` — then `curl http://127.0.0.1:8000/v1/news.php` and `curl http://127.0.0.1:8000/v1/careers.php` should return the seeded rows.
 
 #### Rotating the app user password
 
@@ -513,7 +548,33 @@ php api/lib/migrate.php 2026_04_28_002_create_app_user.sql
 
 ### Seed data
 
-*(None yet.)* When fixtures or reference data are needed, they go in `api/migrations/` as numbered `*_seed_*.sql` files, applied via the same runner.
+**News & Insights** is the first seeded domain. The cleaned legacy posts are committed as `api/seeds/news_seed.sql` — a single idempotent `INSERT ... ON DUPLICATE KEY UPDATE` keyed on the unique `slug`. (Provenance: a one-time WordPress dump was cleaned to Markdown by `scripts/clean-wp-posts.mjs` into a CSV, then exported to this SQL seed; the raw dump and CSV were removed from the repo and backed up offline — the DB is now the source of truth.) Load it into the `news` table — created by migration `003` above — with the `mysql` client:
+
+```sh
+# from the repo root, after migration 003 has run.
+# Uses the same RDS host/credentials as the API; load with whichever user
+# has INSERT on crayhill.* (the app user is sufficient).
+mysql --host="$DB_HOST" --port="${DB_PORT:-3306}" \
+      --user="$DB_USER" --password \
+      --ssl-ca=api/certs/aws-rds-ca-bundle.pem \
+      crayhill < api/seeds/news_seed.sql
+```
+
+Idempotent — safe to re-run; existing rows (matched by `slug`) update, new rows insert.
+
+**Careers** is the second seeded domain. The open job postings are committed as `api/seeds/careers_seed.sql` — same idempotent `INSERT ... ON DUPLICATE KEY UPDATE` keyed on the unique `slug`. (Provenance: a one-time scrape of the legacy crayhill.com Careers listing + job detail pages, converted to Markdown. The DB is now the source of truth; edit the seed/table directly rather than re-scraping.) Load it into the `careers` table — created by migration `004` above — the same way:
+
+```sh
+# from the repo root, after migration 004 has run.
+mysql --host="$DB_HOST" --port="${DB_PORT:-3306}" \
+      --user="$DB_USER" --password \
+      --ssl-ca=api/certs/aws-rds-ca-bundle.pem \
+      crayhill < api/seeds/careers_seed.sql
+```
+
+> **Why a `mysql`-loaded seed and not a `*_seed_*.sql` migration through `api/lib/migrate.php`:** the migration runner splits files naively on `;`, and the Markdown post content is full of semicolons — raw `INSERT` SQL would break apart mid-statement. The real `mysql` client parses string literals correctly, so the content survives intact. Small, semicolon-free reference data can still use a numbered `*_seed_*.sql` migration via the runner.
+
+> **Regenerating after content edits:** edit the rows directly in the DB (the source of truth) or hand-edit `api/seeds/news_seed.sql`. The original CSV-based cleaning pipeline (`scripts/clean-wp-posts.mjs`) is retained for provenance but its inputs are no longer in the repo.
 
 ---
 

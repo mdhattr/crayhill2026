@@ -41,6 +41,9 @@ const SeniorInvestmentProfessionalsPage = lazy(
  */
 const BioPage = lazy(() => import('@/pages/team/bio'))
 const CulturePage = lazy(() => import('@/pages/team/culture'))
+const CareersPage = lazy(() => import('@/pages/careers'))
+const NewsAndInsightsPage = lazy(() => import('@/pages/news-and-insights'))
+const NewsArticlePage = lazy(() => import('@/pages/news-and-insights/detail'))
 
 /**
  * Suspense fallback for lazy-loaded pages. Intentionally invisible — a brief
@@ -109,6 +112,15 @@ const routes: RouteObject[] = [
       {
         path: '/team/culture',
         element: lazyRoute(<CulturePage />),
+      },
+      { path: '/careers', element: lazyRoute(<CareersPage />) },
+      {
+        path: '/news-and-insights',
+        element: lazyRoute(<NewsAndInsightsPage />),
+      },
+      {
+        path: '/news-and-insights/:slug',
+        element: lazyRoute(<NewsArticlePage />),
       },
       { path: '*', element: <NotFoundPage /> },
     ],

@@ -57,7 +57,7 @@ export function AssetFocus() {
         className={
           'mx-auto mt-element grid max-w-7xl ' +
           'grid-cols-1 gap-y-14 ' +
-          'sm:grid-cols-5 sm:gap-x-10 sm:gap-y-0'
+          'lg:grid-cols-5 lg:gap-x-10 lg:gap-y-0'
         }
       >
         {SECTORS.map((sector, i) => (

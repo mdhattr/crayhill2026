@@ -55,7 +55,7 @@ export default function CulturePage() {
              * rounded-2xl matches the corner radius visible in the
              * comp (~16px).
              */}
-            <div className="group mt-element overflow-hidden rounded-2xl">
+            <div className="group mt-element overflow-hidden rounded-image">
               <img
                 src="/images/culture-hero.jpg"
                 alt=""

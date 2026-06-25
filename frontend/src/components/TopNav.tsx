@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 
 /**
  * Primary site navigation. Rendered by RootLayout so it appears on every
@@ -34,7 +34,13 @@ import { Link, NavLink } from 'react-router-dom'
  *     border overlap so the two read as a single composed surface.
  *   - Item text: H4, ink (black). Same hover treatment.
  *
- * Interaction model
+ * Responsive model
+ *   - At `lg` and up: the horizontal nav described below (hover/flyout).
+ *   - Below `lg`: the horizontal nav is hidden and a hamburger toggles a
+ *     full-width accordion panel (see "Mobile navigation" further down).
+ *     Both share the same NAV_ITEMS data.
+ *
+ * Interaction model (desktop)
  *   - On fine-pointer devices (mouse / trackpad): hover opens, mouseleave
  *     closes after a short delay so the cursor can travel from trigger to
  *     panel without dismissing.
@@ -43,8 +49,8 @@ import { Link, NavLink } from 'react-router-dom'
  *     the menu to flicker open-then-closed). Click toggles.
  *   - Click toggles on all devices. Escape closes everything. A click
  *     anywhere outside the nav closes everything.
- *   - Carets rotate 180° to indicate open state (down→up for vertical
- *     disclosures, right→left for the Strategies sub-disclosure).
+ *   - Top-level carets rotate 180° to indicate open state (down→up). The
+ *     Strategies sub-disclosure caret is static (always points right).
  *
  * Notes for future contributors
  *   - Menu items link to canonical kebab-case slugs even though most of
@@ -159,7 +165,7 @@ const NAV_ITEMS: ReadonlyArray<NavItem> = [
         to: '/team/senior-investment-professionals',
       },
       { kind: 'link', label: 'Culture', to: '/team/culture' },
-      { kind: 'link', label: 'Careers', to: '/team/careers' },
+      { kind: 'link', label: 'Careers', to: '/careers' },
     ],
   },
   { kind: 'link', label: 'News & Insights', to: '/news-and-insights' },
@@ -198,16 +204,24 @@ function useHoverCapable(): boolean {
 // Inline chevron icons (no dependency)
 //   - Stroke uses currentColor, so chevrons inherit text color (grey when
 //     idle, ink on hover / open).
-//   - 10px keeps the icon visually subordinate to the H4 label (16px).
-//   - Rotated 180° via CSS transform when `open` so we don't ship two SVGs.
+//   - Rotated 180° via CSS transform when `open` so we don't ship two SVGs,
+//     UNLESS `rotateOnOpen` is false (the Strategies sub-disclosure keeps a
+//     static right-caret rather than flipping right→left).
 // ---------------------------------------------------------------------------
 
 function Chevron({
   open,
   direction,
+  rotateOnOpen = true,
 }: {
   open: boolean
   direction: 'down' | 'right'
+  /**
+   * When true (default), the caret rotates 180° while `open` to signal
+   * state (down→up, right→left). When false it stays put — used for the
+   * Strategies sub-disclosure, which keeps a static right-caret.
+   */
+  rotateOnOpen?: boolean
 }) {
   // Two static path datasets, one for the "down" closed state and one for
   // the "right" closed state. Rotation handles open state.
@@ -216,18 +230,18 @@ function Chevron({
 
   return (
     <svg
-      width="10"
-      height="10"
+      width="1em"
+      height="1em"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2.5"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
       className={
         'ml-1.5 inline-block shrink-0 transition-transform duration-150 ease-out ' +
-        (open ? '-rotate-180' : 'rotate-0')
+        (rotateOnOpen && open ? '-rotate-180' : 'rotate-0')
       }
     >
       <polyline points={points} />
@@ -333,7 +347,7 @@ function SubDisclosure({
           className={dropdownDisclosureTriggerClass}
         >
           <span>{item.label}</span>
-          <Chevron open={open} direction="right" />
+          <Chevron open={open} direction="right" rotateOnOpen={false} />
         </button>
       </h4>
 
@@ -484,17 +498,141 @@ function TopDisclosure({
 }
 
 // ---------------------------------------------------------------------------
+// Mobile navigation (below the `lg` breakpoint)
+//
+// The desktop hover/flyout model doesn't translate to a 320–768px phone, so
+// below `lg` the horizontal nav is replaced by a hamburger that toggles a
+// full-width panel. Inside the panel the same NAV_ITEMS render as a vertical
+// accordion: leaf links navigate (and close the menu), disclosures expand
+// their children inline (no right-flyout). Nesting is unlimited in principle;
+// in practice it's two levels deep (About → Strategies).
+// ---------------------------------------------------------------------------
+
+function MenuIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      aria-hidden="true"
+      className="block"
+    >
+      {open ? (
+        <>
+          <line x1="5" y1="5" x2="19" y2="19" />
+          <line x1="19" y1="5" x2="5" y2="19" />
+        </>
+      ) : (
+        <>
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </>
+      )}
+    </svg>
+  )
+}
+
+const mobileLinkClass =
+  'block py-3 text-ink ' +
+  'hover:underline focus-visible:underline focus-visible:outline-none'
+
+const mobileDisclosureTriggerClass =
+  'flex w-full items-center justify-between gap-2 py-3 text-left text-ink ' +
+  'bg-transparent border-0 cursor-pointer appearance-none ' +
+  'focus-visible:underline focus-visible:outline-none'
+
+function MobileNavItem({
+  item,
+  onNavigate,
+}: {
+  item: NavItem
+  onNavigate: () => void
+}) {
+  if (item.kind === 'link') {
+    return (
+      <li>
+        <h4>
+          <NavLink to={item.to} className={mobileLinkClass} onClick={onNavigate}>
+            {item.label}
+          </NavLink>
+        </h4>
+      </li>
+    )
+  }
+  return <MobileDisclosure item={item} onNavigate={onNavigate} />
+}
+
+function MobileDisclosure({
+  item,
+  onNavigate,
+}: {
+  item: DisclosureItem
+  onNavigate: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const panelId = useId()
+
+  return (
+    <li>
+      <h4>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen((prev) => !prev)}
+          className={mobileDisclosureTriggerClass}
+        >
+          <span>{item.label}</span>
+          <Chevron open={open} direction="down" />
+        </button>
+      </h4>
+
+      {open && (
+        // Nested rows indent one step and sit on a hairline so the
+        // hierarchy reads at a glance in the flat accordion.
+        <ul
+          id={panelId}
+          className="ml-3 border-l border-rule-soft pl-3"
+        >
+          {item.children.map((child) => (
+            <MobileNavItem
+              key={child.kind === 'link' ? child.to : child.label}
+              item={child}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // TopNav (export)
 // ---------------------------------------------------------------------------
 
 export function TopNav() {
   const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const headerRef = useRef<HTMLElement>(null)
+  const mobilePanelId = useId()
+  const { pathname } = useLocation()
 
-  // Escape closes any open menu from anywhere on the page.
+  const closeAll = () => {
+    setOpenMenu(null)
+    setMobileOpen(false)
+  }
+
+  // Escape closes any open menu (desktop dropdowns or the mobile panel)
+  // from anywhere on the page.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpenMenu(null)
+      if (e.key === 'Escape') closeAll()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -509,26 +647,33 @@ export function TopNav() {
         headerRef.current &&
         !headerRef.current.contains(e.target as Node)
       ) {
-        setOpenMenu(null)
+        closeAll()
       }
     }
     document.addEventListener('pointerdown', onPointer)
     return () => document.removeEventListener('pointerdown', onPointer)
   }, [])
 
+  // A completed navigation (path change) should always leave the nav closed —
+  // otherwise the mobile panel stays open over the freshly-loaded page.
+  useEffect(() => {
+    closeAll()
+  }, [pathname])
+
   return (
     <header ref={headerRef} className="relative z-40 bg-paper-alt">
-      <div className="flex items-center justify-between px-10 py-10">
+      <div className="flex items-center justify-between px-6 py-6 sm:px-10 lg:py-10">
         <Link to="/" aria-label="Crayhill Capital Management — Home">
           <img
             src="/crayhill-r-logo-svg/crayhill-r-logo-color.svg"
             alt=""
             width={175}
-            className="block h-auto w-[175px]"
+            className="block h-auto w-[140px] sm:w-[175px]"
           />
         </Link>
 
-        <nav aria-label="Primary">
+        {/* Desktop nav — hover/flyout model, shown at lg and up. */}
+        <nav aria-label="Primary" className="hidden lg:block">
           <ul className="flex items-center gap-10">
             {NAV_ITEMS.map((item) => {
               if (item.kind === 'link') {
@@ -558,7 +703,43 @@ export function TopNav() {
             })}
           </ul>
         </nav>
+
+        {/* Mobile trigger — shown below lg. */}
+        <button
+          type="button"
+          className="text-ink lg:hidden"
+          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={mobileOpen}
+          aria-controls={mobilePanelId}
+          onClick={() => setMobileOpen((prev) => !prev)}
+        >
+          <MenuIcon open={mobileOpen} />
+        </button>
       </div>
+
+      {/* Mobile panel — full-width accordion overlay, below lg only. */}
+      {mobileOpen && (
+        <div
+          id={mobilePanelId}
+          className={
+            'absolute inset-x-0 top-full z-40 max-h-[80dvh] overflow-y-auto ' +
+            'border-t border-rule-soft bg-paper-alt px-6 pb-8 pt-2 shadow-lg ' +
+            'lg:hidden'
+          }
+        >
+          <nav aria-label="Primary">
+            <ul className="divide-y divide-rule-soft">
+              {NAV_ITEMS.map((item) => (
+                <MobileNavItem
+                  key={item.kind === 'link' ? item.to : item.label}
+                  item={item}
+                  onNavigate={() => setMobileOpen(false)}
+                />
+              ))}
+            </ul>
+          </nav>
+        </div>
+      )}
     </header>
   )
 }

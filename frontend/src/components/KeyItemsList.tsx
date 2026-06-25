@@ -16,26 +16,33 @@ import { useInViewOnce } from '@/hooks/useInViewOnce'
  *     or right after a hard paper-deep → paper-dark transition, and
  *     the designer wants the eyebrow close to the top of the dark
  *     surface in both cases.
- *   - Items as <h4> white links. Hover/focus → --color-accent-green.
+ *   - Items as <h4> in white.
  *   - Dividers as white-at-20%-opacity rules.
  *
  * Variant: 'sector'
  *   - Used on sector deep-dive pages (Power & Infrastructure, etc).
  *   - Standard module padding: `py-module` (120px top and bottom) —
  *     the designer's explicit per-element annotation on this page.
- *   - Items as <h3> white links (larger headline scale; the items
+ *   - Items as <h3> in white (larger headline scale; the items
  *     here are the canonical "asset types" of the sector, which the
  *     design treats as more prominent than the strategy-page
  *     subdivisions).
  *   - Dividers as --color-accent-light (#9AC6EB) — the lightest
  *     swatch in the brand navy→sky-blue gradient.
  *
+ * Linking (`linked` prop, default false):
+ *   - By default items render as plain headings — NOT links, no hover
+ *     or focus color change. This is the common case: most key-asset
+ *     lists are descriptive, not navigable.
+ *   - When `linked` is true, each item with a `to` becomes a full-row
+ *     <NavLink> (accent-green on hover/focus). Only the ABF Credit
+ *     Opportunities page opts in, linking each asset type to its
+ *     canonical sector page.
+ *
  * Both variants:
  *   - <section> on --color-paper-dark.
  *   - H5 eyebrow in --color-accent (blue), uppercase + tracking from
  *     the H5 base rule.
- *   - Full-row click target (`block` on the NavLink + padding on the
- *     link, not on the heading), accent-green on hover/focus.
  *   - The list is bracketed top and bottom by the same divider rule.
  *
  * Animation (both variants):
@@ -48,12 +55,13 @@ export type KeyItem = {
   /** Display label, authored in Title Case. */
   label: string
   /**
-   * Route the item links to. Accepts any react-router-dom-compatible
-   * `to` value — typically a kebab-case slug under `/sectors/...`
-   * for the existing pages, but page authors are free to point items
-   * at whatever route makes sense for their context.
+   * Route the item links to. Only consumed when the list is rendered
+   * with `linked` (currently just the ABF Credit Opportunities page);
+   * otherwise items are plain headings and `to` is ignored. Accepts
+   * any react-router-dom-compatible `to` value — typically a
+   * kebab-case slug under `/sectors/...`.
    */
-  to: string
+  to?: string
 }
 
 export type KeyItemsListVariant = 'strategy' | 'sector'
@@ -86,6 +94,7 @@ export function KeyItemsList({
   eyebrow,
   items,
   variant = 'strategy',
+  linked = false,
 }: {
   /**
    * H5 eyebrow text. Authored in Title Case (or however the brand
@@ -100,6 +109,12 @@ export function KeyItemsList({
    * 'strategy' for backward compatibility with existing usage.
    */
   variant?: KeyItemsListVariant
+  /**
+   * When true, items with a `to` render as full-row links with a
+   * hover/focus accent. When false (default), items render as plain
+   * headings with no link or hover effect. See the module JSDoc.
+   */
+  linked?: boolean
 }) {
   const [listRef, inView] = useInViewOnce<HTMLUListElement>()
   const styles = VARIANT_STYLES[variant]
@@ -121,30 +136,38 @@ export function KeyItemsList({
                 ? 'translate-y-0 opacity-100'
                 : 'translate-y-8 opacity-0')
 
+            // Shared row geometry: full-width block with the same
+            // vertical padding whether the row is a link or plain text.
+            const rowClass = 'block py-6 text-white'
             const linkClass =
-              'block py-6 text-white ' +
-              'transition-colors duration-150 ' +
+              rowClass +
+              ' transition-colors duration-150 ' +
               'hover:text-accent-green ' +
               'focus-visible:text-accent-green focus-visible:outline-none'
 
             // Visually-styling = semantic tag (per brand rule):
             // strategy variant renders H4 items, sector variant H3.
             const HeadingTag = variant === 'sector' ? 'h3' : 'h4'
+            const isLink = linked && Boolean(item.to)
 
             return (
               <li
-                key={item.to}
+                key={item.label}
                 className={liClass}
                 style={{
                   transitionDuration: `${ANIM_DURATION_MS}ms`,
                   transitionDelay: `${i * ANIM_STAGGER_MS}ms`,
                 }}
               >
-                <HeadingTag>
-                  <NavLink to={item.to} className={linkClass}>
-                    {item.label}
-                  </NavLink>
-                </HeadingTag>
+                {isLink ? (
+                  <HeadingTag>
+                    <NavLink to={item.to as string} className={linkClass}>
+                      {item.label}
+                    </NavLink>
+                  </HeadingTag>
+                ) : (
+                  <HeadingTag className={rowClass}>{item.label}</HeadingTag>
+                )}
               </li>
             )
           })}

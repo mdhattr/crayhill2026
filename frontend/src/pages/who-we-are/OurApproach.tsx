@@ -110,7 +110,7 @@ export function OurApproach() {
           className={
             'mt-element grid grid-cols-1 gap-y-14 ' +
             'sm:grid-cols-2 sm:gap-x-10 ' +
-            'md:grid-cols-4 md:gap-x-10'
+            'lg:grid-cols-4 lg:gap-x-10'
           }
         >
           {PRINCIPLES.map((p, i) => (

@@ -87,7 +87,7 @@ export default function InvestmentGradeABFPage() {
                 enhanced yield and diversification of private markets.
               </p>
 
-              <div className="group overflow-hidden">
+              <div className="group overflow-hidden rounded-image">
                 <img
                   src="/images/strategies-inv-grade-hero.jpg"
                   alt=""

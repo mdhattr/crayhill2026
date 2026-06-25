@@ -111,7 +111,7 @@ const FOOTER_COLUMNS: ReadonlyArray<ReadonlyArray<FooterTitleBlock>> = [
           label: 'Senior Investment Professionals',
           to: '/team/senior-investment-professionals',
         },
-        { label: 'Careers', to: '/team/careers' },
+        { label: 'Careers', to: '/careers' },
         { label: 'Culture', to: '/team/culture' },
       ],
     },
@@ -160,7 +160,7 @@ const fineLinkClass =
 
 export function Footer() {
   return (
-    <footer className="bg-paper-dark px-10 py-[90px]">
+    <footer className="bg-paper-dark px-6 py-[90px] sm:px-10">
       <div className="grid grid-cols-1 gap-x-10 gap-y-12 md:grid-cols-5">
         {/* Column 1: logo + address (top), copyright + legal (bottom). */}
         <div className="flex h-full flex-col justify-between gap-12">
@@ -191,7 +191,9 @@ export function Footer() {
               >
                 Legal Notice &amp; Disclosures
               </NavLink>
-              {'  |  '}
+              {/* Two non-breaking spaces each side so the gap survives HTML
+                  whitespace collapsing (plain spaces would render as one). */}
+              {'\u00a0\u00a0|\u00a0\u00a0'}
               <NavLink to="/privacy-policy" className={fineLinkClass}>
                 Privacy Policy
               </NavLink>

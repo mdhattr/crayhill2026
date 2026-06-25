@@ -129,7 +129,7 @@ export default function PowerAndInfrastructurePage() {
               'md:grid-cols-2 md:gap-x-10 md:gap-y-0'
             }
           >
-            <div className="group overflow-hidden">
+            <div className="group overflow-hidden rounded-image">
               <img
                 src="/images/sectors-power-hero-1.jpg"
                 alt=""
@@ -155,7 +155,7 @@ export default function PowerAndInfrastructurePage() {
                 funding gap.
               </h3>
 
-              <div className="group overflow-hidden">
+              <div className="group overflow-hidden rounded-image">
                 <img
                   src="/images/sectors-power-hero-2.jpg"
                   alt=""

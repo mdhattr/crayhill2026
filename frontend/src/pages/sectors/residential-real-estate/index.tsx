@@ -122,7 +122,7 @@ export default function ResidentialRealEstatePage() {
                 homebuilders and mortgage originators.
               </h3>
 
-              <div className="group overflow-hidden">
+              <div className="group overflow-hidden rounded-image">
                 <img
                   src="/images/sectors-res-real-estate-hero.jpg"
                   alt=""

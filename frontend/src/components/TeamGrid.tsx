@@ -43,12 +43,12 @@ export type TeamGridProps = {
 function CtaChevron() {
   return (
     <svg
-      width="10"
-      height="14"
+      width="0.7em"
+      height="1em"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2.5"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -123,19 +123,20 @@ export function TeamGrid({
                * `relative` anchors the H3 link's ::after overlay so
                * it fills the card. `group` exposes hover/focus-
                * within to descendants (image and CTA span both
-               * react). `focus-within` paints a subtle outline so
-               * keyboard focus on the H3 link still produces a
-               * visible focus ring (the link itself hides its own
-               * outline so we don't double-paint).
+               * react). `has-[:focus-visible]` paints the focus ring
+               * ONLY for keyboard focus — a mouse click on the card
+               * should open the bio without highlighting the box (the
+               * link itself hides its own outline so we don't
+               * double-paint).
                */
               className={
                 'group relative ' +
-                'focus-within:outline focus-within:outline-2 ' +
-                'focus-within:outline-offset-4 ' +
-                'focus-within:outline-accent-navy'
+                'has-[:focus-visible]:outline has-[:focus-visible]:outline-2 ' +
+                'has-[:focus-visible]:outline-offset-4 ' +
+                'has-[:focus-visible]:outline-accent-navy'
               }
             >
-              <div className="overflow-hidden">
+              <div className="overflow-hidden rounded-image">
                 <img
                   src={member.imageSrc}
                   alt=""

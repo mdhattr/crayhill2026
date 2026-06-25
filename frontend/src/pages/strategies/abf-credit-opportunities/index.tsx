@@ -64,7 +64,7 @@ export default function ABFCreditOpportunitiesPage() {
               'md:grid-cols-2 md:gap-x-10 md:gap-y-0'
             }
           >
-            <div className="group overflow-hidden">
+            <div className="group overflow-hidden rounded-image">
               <img
                 src="/images/strategies-abf-opp-hero-1.jpg"
                 alt=""
@@ -96,7 +96,7 @@ export default function ABFCreditOpportunitiesPage() {
                 financial assets.
               </h3>
 
-              <div className="group overflow-hidden">
+              <div className="group overflow-hidden rounded-image">
                 <img
                   src="/images/strategies-abf-opp-hero-2.jpg"
                   alt=""
@@ -114,7 +114,7 @@ export default function ABFCreditOpportunitiesPage() {
           </div>
         </section>
 
-        <KeyItemsList eyebrow="Key Asset Types" items={SECTORS} />
+        <KeyItemsList eyebrow="Key Asset Types" items={SECTORS} linked />
       </main>
     </>
   )
