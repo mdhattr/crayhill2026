@@ -24,6 +24,7 @@ export function useAdminSession() {
     queryKey: SESSION_KEY,
     queryFn: fetchAdminSession,
     staleTime: 0,
+    retry: false,
   })
 }
 

@@ -12,7 +12,7 @@ require_once __DIR__ . '/env.php';
  * cookie is not sent over plain HTTP in prod once HTTPS lands.
  */
 
-function cms_session_start(): void
+function cms_session_start(bool $readAndClose = false): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
         return;
@@ -29,19 +29,23 @@ function cms_session_start(): void
         'samesite' => 'Lax',
     ]);
 
-    session_start();
+    if ($readAndClose) {
+        session_start(['read_and_close' => true]);
+    } else {
+        session_start();
+    }
 }
 
 function cms_session_is_authenticated(): bool
 {
-    cms_session_start();
+    cms_session_start(readAndClose: true);
 
     return !empty($_SESSION['cms_authenticated']);
 }
 
 function cms_session_username(): ?string
 {
-    cms_session_start();
+    cms_session_start(readAndClose: true);
 
     if (!cms_session_is_authenticated()) {
         return null;

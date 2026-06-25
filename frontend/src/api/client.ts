@@ -17,6 +17,9 @@
 // a full origin only when the API lives on a different host.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 
+/** Fail fast when the API is unreachable (e.g. PHP not wired on EC2). */
+const API_TIMEOUT_MS = 15_000
+
 export type ApiErrorBody = {
   code: string
   message: string
@@ -76,6 +79,7 @@ async function apiRequest<T>(
     headers,
     // CMS session cookie (and any future cookie-auth endpoints).
     credentials: 'include',
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
   }
 
   if (init.body !== undefined) {
@@ -87,9 +91,13 @@ async function apiRequest<T>(
   try {
     res = await fetch(url, fetchInit)
   } catch (cause) {
+    const timedOut =
+      cause instanceof DOMException && cause.name === 'TimeoutError'
     throw new ApiError(
-      'Network request failed. Check your connection and try again.',
-      'NETWORK_ERROR',
+      timedOut
+        ? 'The server did not respond in time. The API may not be running on this host.'
+        : 'Network request failed. Check your connection and try again.',
+      timedOut ? 'TIMEOUT' : 'NETWORK_ERROR',
       0,
       cause instanceof Error ? { detail: cause.message } : undefined,
     )
