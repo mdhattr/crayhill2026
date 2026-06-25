@@ -74,7 +74,16 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 // Menu data structure
 // ---------------------------------------------------------------------------
 
-type LinkItem = { kind: 'link'; label: string; to: string }
+type LinkItem = {
+  kind: 'link'
+  label: string
+  to: string
+  /**
+   * When true, `to` is an absolute external URL opened in a new tab via a
+   * plain <a> (not client-side routing). Used for the Partner Login portal.
+   */
+  external?: boolean
+}
 
 type DisclosureItem = {
   kind: 'disclosure'
@@ -169,7 +178,12 @@ const NAV_ITEMS: ReadonlyArray<NavItem> = [
     ],
   },
   { kind: 'link', label: 'News & Insights', to: '/news-and-insights' },
-  { kind: 'link', label: 'Partner Login', to: '/partner-login' },
+  {
+    kind: 'link',
+    label: 'Partner Login',
+    to: 'https://citcoone.citco.com/ui/login',
+    external: true,
+  },
 ]
 
 // ---------------------------------------------------------------------------
@@ -557,9 +571,25 @@ function MobileNavItem({
     return (
       <li>
         <h4>
-          <NavLink to={item.to} className={mobileLinkClass} onClick={onNavigate}>
-            {item.label}
-          </NavLink>
+          {item.external ? (
+            <a
+              href={item.to}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={mobileLinkClass}
+              onClick={onNavigate}
+            >
+              {item.label}
+            </a>
+          ) : (
+            <NavLink
+              to={item.to}
+              className={mobileLinkClass}
+              onClick={onNavigate}
+            >
+              {item.label}
+            </NavLink>
+          )}
         </h4>
       </li>
     )
@@ -680,9 +710,20 @@ export function TopNav() {
                 return (
                   <li key={item.to}>
                     <h4>
-                      <NavLink to={item.to} className={topLevelTriggerClass}>
-                        {item.label}
-                      </NavLink>
+                      {item.external ? (
+                        <a
+                          href={item.to}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={topLevelTriggerClass}
+                        >
+                          {item.label}
+                        </a>
+                      ) : (
+                        <NavLink to={item.to} className={topLevelTriggerClass}>
+                          {item.label}
+                        </NavLink>
+                      )}
                     </h4>
                   </li>
                 )

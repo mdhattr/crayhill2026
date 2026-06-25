@@ -45,12 +45,14 @@ type FooterTitleBlock = {
   /** Uppercase H5 label shown in --color-accent. */
   title: string
   /**
-   * If present, the title itself is a NavLink to this internal route.
-   * Used for News & Insights and Partner Login, which have their own
-   * pages but no children to list beneath them. Omit for non-clickable
-   * category labels (About, Sectors, Team).
+   * If present, the title itself links to this destination. Internal routes
+   * (e.g. News & Insights) render as a NavLink; set `titleExternal` for an
+   * absolute URL opened in a new tab (e.g. the Partner Login portal). Omit
+   * for non-clickable category labels (About, Sectors, Team).
    */
   titleHref?: string
+  /** When true, `titleHref` is an external URL opened in a new tab. */
+  titleExternal?: boolean
   /** Optional list of child links rendered as Body 2 white links. */
   items?: ReadonlyArray<FooterLink>
 }
@@ -118,7 +120,11 @@ const FOOTER_COLUMNS: ReadonlyArray<ReadonlyArray<FooterTitleBlock>> = [
   ],
   [
     { title: 'News & Insights', titleHref: '/news-and-insights' },
-    { title: 'Partner Login', titleHref: '/partner-login' },
+    {
+      title: 'Partner Login',
+      titleHref: 'https://citcoone.citco.com/ui/login',
+      titleExternal: true,
+    },
   ],
 ]
 
@@ -214,15 +220,27 @@ export function Footer() {
                   {block.titleHref ? (
                     // Linked title: the <h5> carries heading semantics +
                     // H5 typography (uppercase + tracking from @layer
-                    // base). The inner <NavLink> carries the hover
-                    // underline and color inherits through.
+                    // base). The inner link carries the hover underline and
+                    // color inherits through. External titles (Partner
+                    // Login) open in a new tab via a plain <a>.
                     <h5 className={titleColorClass}>
-                      <NavLink
-                        to={block.titleHref}
-                        className={titleLinkInnerClass}
-                      >
-                        {block.title}
-                      </NavLink>
+                      {block.titleExternal ? (
+                        <a
+                          href={block.titleHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={titleLinkInnerClass}
+                        >
+                          {block.title}
+                        </a>
+                      ) : (
+                        <NavLink
+                          to={block.titleHref}
+                          className={titleLinkInnerClass}
+                        >
+                          {block.title}
+                        </NavLink>
+                      )}
                     </h5>
                   ) : (
                     <h5 className={titleColorClass}>{block.title}</h5>
