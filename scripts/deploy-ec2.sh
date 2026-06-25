@@ -81,4 +81,16 @@ if command -v getenforce >/dev/null 2>&1 && [ "$(getenforce)" = "Enforcing" ]; t
 fi
 
 sudo systemctl reload httpd
+
+# If the PHP API is wired (see scripts/setup-api-ec2.sh), confirm JSON health.
+# A 200 with HTML means FallbackResource is still swallowing /api — News/Careers
+# will show empty/error until setup-api-ec2.sh has been run once.
+if curl -sf http://localhost/api/v1/health 2>/dev/null | grep -q '"database"'; then
+  echo "API health OK (/api/v1/health)."
+elif curl -sf http://localhost/api/v1/health 2>/dev/null | grep -qi '<!doctype html'; then
+  echo "WARNING: /api/v1/health returned HTML — PHP API is not wired yet." >&2
+  echo "         News & Careers will not load DB data until you run:" >&2
+  echo "         bash $REPO_ROOT/scripts/setup-api-ec2.sh" >&2
+fi
+
 echo "Deploy complete — $DOCROOT republished and httpd reloaded."

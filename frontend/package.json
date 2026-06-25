@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "bash ../scripts/dev-api.sh",
     "build": "tsc -b && vite build",
     "deploy": "bash ../scripts/deploy-ec2.sh",
     "lint": "eslint .",

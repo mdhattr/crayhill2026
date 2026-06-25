@@ -2,7 +2,7 @@
 
 This is the living install / deploy runbook for the Crayhill rebrand. It grows with the project — every change that adds a dependency, env var, build step, or system requirement updates this file in the same commit.
 
-> **Status (current):** Frontend scaffold (React + Vite + TS + Tailwind v4 + React Router + brand type scale with both fonts live — Montserrat self-hosted via `@fontsource`, New Science via Adobe Fonts / Typekit + global `TopNav`) + PHP API (`GET /api/v1/health` plus the first real data endpoint, `GET /api/v1/news`) + MariaDB schema `crayhill` with least-privilege app user `crayhill_app` and a seeded `news` table on RDS + designer-delivered brand assets staged in `assets/` and served via Vite's `publicDir`. The **News & Insights** page is the first end-to-end DB-backed feature: TanStack Query + a typed API client in `frontend/src/api/` consume `GET /api/v1/news`. The static frontend `dist/` is deployed to an Amazon Linux 2023 EC2 instance and served over plain HTTP by Apache (see "EC2 deployment"). The PHP API is not yet deployed to EC2 (the box serves static only), so the live News page there has no data until PHP-FPM + the `/api` reverse proxy land — those sections, plus HTTPS, grow as the work lands.
+> **Status (current):** Frontend scaffold (React + Vite + TS + Tailwind v4 + React Router + brand type scale with both fonts live — Montserrat self-hosted via `@fontsource`, New Science via Adobe Fonts / Typekit + global `TopNav`) + PHP API (`GET /api/v1/health`, `GET /api/v1/news`, `GET /api/v1/careers`) + MariaDB schema `crayhill` with least-privilege app user `crayhill_app` and seeded `news` / `careers` tables on RDS + designer-delivered brand assets staged in `assets/` and served via Vite's `publicDir`. **News & Insights** and **Careers** are DB-backed via TanStack Query + the typed client in `frontend/src/api/`. The static frontend `dist/` is deployed to an Amazon Linux 2023 EC2 instance and served over plain HTTP by Apache (see "EC2 deployment"). **PHP-FPM + `/api` routing is scripted** (`scripts/setup-api-ec2.sh`) but must be run once on the box — until then Apache's SPA `FallbackResource` serves `index.html` for `/api/v1/*` and those pages show no data. HTTPS (certbot) is still pending.
 
 ---
 
@@ -11,10 +11,10 @@ This is the living install / deploy runbook for the Crayhill rebrand. It grows w
 The project is a **rebrand of crayhill.com** for Crayhill Capital Management. Architecture:
 
 ```
-React SPA (frontend/)  ──HTTPS / JSON──▶  PHP API (api/, planned)  ──PDO──▶  MariaDB on RDS
+React SPA (frontend/)  ──HTTPS / JSON──▶  PHP API (api/)  ──PDO──▶  MariaDB on RDS
 ```
 
-Today only the frontend exists, serving a placeholder homepage. The PHP API and database wiring will be added in subsequent steps.
+The React app is a single-page app. News, Careers, and future CMS-backed content load from the PHP API at `/api/v1/*`. Static marketing copy lives inline in page components until it moves to the DB.
 
 ---
 
@@ -111,13 +111,24 @@ Expected response (DB connectivity may vary depending on your network — see Tr
 
 > **URL note for local vs. production:** PHP's built-in dev server serves files directly from `api/`, so the local URL is `/v1/health.php`. In production behind Nginx/Apache, the path will be rewritten to the canonical `/api/v1/health` form (no `.php` extension, with `/api` prefix). The frontend's API client targets the canonical `/api/v1/...` form and relies on `VITE_API_BASE_URL` to differentiate environments.
 
-> **Frontend ↔ API in dev:** the Vite dev server proxies `/api` to the local PHP server (`http://localhost:8000`), rewriting the clean URL `/api/v1/<name>` to the file it serves (`/v1/<name>.php`) — see `server.proxy` in `frontend/vite.config.ts`. So to exercise the News & Insights page locally, run **both** `npm run dev` (frontend) **and** `php -S localhost:8000 -t api` (API) in separate terminals, with RDS reachable (see "AWS RDS access for local development"). The page degrades to an error state if the API is down.
+> **Frontend ↔ API in dev:** the Vite dev server proxies `/api` to the local PHP server (`http://127.0.0.1:8000`), rewriting the clean URL `/api/v1/<name>` to the file it serves (`/v1/<name>.php`) — see `server.proxy` in `frontend/vite.config.ts`. **Both processes must be running** for News & Insights and Careers to load data:
+>
+> ```sh
+> # Terminal 1 — frontend (from frontend/)
+> npm run dev
+>
+> # Terminal 2 — PHP API (from frontend/, or repo root)
+> npm run dev:api
+> ```
+>
+> `npm run dev:api` runs `scripts/dev-api.sh`, which starts `php -S 127.0.0.1:8000 -t api`. RDS must be reachable from your machine (see "AWS RDS access for local development"). If only `npm run dev` is running, Vite logs `[vite] http proxy error: /v1/news.php ECONNREFUSED` and those pages show loading/error states.
 
 ### Frontend scripts
 
 | Command          | What it does                                                         |
 | ---------------- | -------------------------------------------------------------------- |
 | `npm run dev`    | Starts Vite dev server with HMR (hot module replacement).            |
+| `npm run dev:api`| Starts the local PHP API on `127.0.0.1:8000` (run alongside `dev`). |
 | `npm run build`  | Type-checks (`tsc -b`) then produces a production bundle in `dist/`. |
 | `npm run preview`| Serves the production `dist/` locally for a sanity check.            |
 | `npm run lint`   | Runs ESLint over the project.                                        |
@@ -680,7 +691,7 @@ The two operations below are **already done** in the current dev environment; th
 
 ## EC2 deployment
 
-> **Status (current):** Static frontend only. The React `dist/` is built on the box and served by **Apache (httpd)** over plain HTTP at the instance's public IP. The PHP API (PHP-FPM + `/api` reverse proxy) and HTTPS (certbot) are **not yet wired up** — HTTPS in particular needs a real domain pointed at the box first, since Let's Encrypt won't issue a certificate for a bare IP. Those sections grow here when that work lands.
+> **Status (current):** Static frontend is deployed via `npm run deploy` to `/var/www/crayhill`. The PHP API is **not automatic** — run `scripts/setup-api-ec2.sh` once on the box to wire PHP-FPM + Apache so `/api/v1/*` returns JSON from RDS. Until that script runs, News & Insights and Careers show no data (Apache's SPA fallback serves `index.html` for API URLs). HTTPS (certbot) is still pending.
 
 The box is **Amazon Linux 2023**. All commands below run **on the EC2 instance** over SSH. On the current box the repo is cloned at `/var/www/crayhill2026` (the path is machine-specific — substitute your own if it differs).
 
@@ -711,25 +722,30 @@ If SELinux is enforcing (check with `getenforce`), restore the web-content file 
 sudo restorecon -R /var/www/crayhill
 ```
 
-### 3. Virtual host with SPA fallback (run once)
+### 3. Virtual host with SPA fallback + API routing (run once)
 
-The site is a single-page app: React Router handles routing client-side, so any URL that isn't a real file on disk (e.g. `/who-we-are`) must be served `index.html` so the router can take over. Apache's `FallbackResource` is the clean idiom for this — real assets (`/assets/*.js`, `/images/*`) are still served directly; only non-matching paths fall through to the SPA entrypoint.
+The site is a single-page app: React Router handles routing client-side, so any URL that isn't a real file on disk (e.g. `/who-we-are`) must be served `index.html`. **But** `/api/v1/*` must **not** hit that fallback — those paths must reach the PHP API in the repo or the browser receives HTML instead of JSON and DB-backed pages go blank.
 
-Create `/etc/httpd/conf.d/crayhill.conf`:
+The committed vhost lives at `config/httpd/crayhill.conf`. Install it with the one-time setup script (recommended — also installs PHP-FPM and fixes secrets permissions):
 
-```apache
-<VirtualHost *:80>
-    DocumentRoot /var/www/crayhill
+```sh
+bash /var/www/crayhill2026/scripts/setup-api-ec2.sh
+```
 
-    <Directory /var/www/crayhill>
-        Require all granted
-        # React Router: send unknown paths to the SPA entrypoint
-        FallbackResource /index.html
-    </Directory>
+Prerequisites before running that script:
 
-    ErrorLog  /var/log/httpd/crayhill_error.log
-    CustomLog /var/log/httpd/crayhill_access.log combined
-</VirtualHost>
+1. `.config/secrets.env` exists on the box at `/var/www/crayhill2026/.config/secrets.env` with production `DB_*` values.
+2. The RDS security group allows inbound **3306** from this EC2 instance's security group (or private IP if both are in the VPC).
+
+The script installs `php-fpm` + `php-mysqlnd`, copies the vhost to `/etc/httpd/conf.d/crayhill.conf` (substituting the repo path), sets `secrets.env` to mode `640` / group `apache`, applies SELinux labels when enforcing, reloads `php-fpm` + `httpd`, and smoke-tests `GET /api/v1/health`.
+
+Manual equivalent (if you prefer not to use the script) — copy and customize the committed file:
+
+```sh
+sudo sed "s|@CRAYHILL_REPO@|/var/www/crayhill2026|g" \
+  /var/www/crayhill2026/config/httpd/crayhill.conf \
+  | sudo tee /etc/httpd/conf.d/crayhill.conf
+sudo apachectl configtest && sudo systemctl reload httpd
 ```
 
 Validate and reload:
@@ -752,6 +768,8 @@ sudo systemctl reload httpd
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost/            # 200
 curl -s http://localhost/ | grep -o '<title>.*</title>'              # the page title
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost/who-we-are # 200 via FallbackResource
+curl -s http://localhost/api/v1/health | head -c 120                 # JSON with "database" (after setup-api-ec2.sh)
+curl -s http://localhost/api/v1/news | head -c 80                    # JSON array (after setup-api-ec2.sh)
 ```
 
 ### 5. Open port 80 in the security group
@@ -805,10 +823,10 @@ Ordered steps for the very first deploy onto a fresh Amazon Linux 2023 EC2 box. 
    sudo chown -R apache:apache /var/www/crayhill
    sudo restorecon -R /var/www/crayhill   # if SELinux is enforcing
    ```
-6. Create `/etc/httpd/conf.d/crayhill.conf` (vhost with `FallbackResource`), then `sudo apachectl configtest && sudo systemctl reload httpd`.
+6. Create `/etc/httpd/conf.d/crayhill.conf` via `bash scripts/setup-api-ec2.sh` (installs PHP-FPM + API routing + SPA fallback), then confirm `sudo apachectl configtest`.
 7. Disable `welcome.conf` if the Apache test page shows instead of the site.
 8. Open inbound port 80 in the instance's security group.
-9. Smoke test (`curl http://localhost/`) and confirm in a browser at `http://<public-ip>/`.
+9. Smoke test (`curl http://localhost/` and `curl http://localhost/api/v1/health`) and confirm in a browser at `http://<public-ip>/`.
 
 ---
 
@@ -857,6 +875,15 @@ Then re-run the smoke test and confirm in a browser. Apache config (`crayhill.co
 
 > Add an entry here every time we hit a real failure mode and figure out the fix.
 
+- **News & Insights / Careers show no articles or jobs (empty or error state).** The frontend calls `/api/v1/news` and `/api/v1/careers`. Diagnose in order:
+  1. **Local dev:** Is `npm run dev:api` running in a second terminal? Vite proxies `/api` to `127.0.0.1:8000`; without the PHP server you get `[vite] http proxy error ... ECONNREFUSED` and the pages fail.
+  2. **EC2:** Did you run `bash /var/www/crayhill2026/scripts/setup-api-ec2.sh` once? Until PHP-FPM is wired, Apache's SPA `FallbackResource` returns `index.html` for `/api/v1/*` — the browser can't parse that as JSON.
+  3. **Quick check on the box:**
+     ```sh
+     curl -s http://localhost/api/v1/health | head -c 200
+     ```
+     Expect JSON with `"database":{"connected":true,...}`. If you see `<!doctype html`, the API is not wired. If JSON shows `"connected":false`, see the RDS troubleshooting entries below.
+- **`npm run deploy` prints `WARNING: /api/v1/health returned HTML`.** Same as (2) above — run `scripts/setup-api-ec2.sh` on the EC2 instance after provisioning `.config/secrets.env`.
 - **`npm install` fails inside `frontend/` with `ENOENT package.json` from the repo root.** You ran `npm install` from a shell that wasn't actually `cd`'d into `frontend/`. Verify with `pwd` first; npm walks **up** the tree looking for `package.json` and will report the topmost path it tried.
 - **`tsc -b` fails with `error TS5101: Option 'baseUrl' is deprecated`.** TypeScript 6 deprecated `baseUrl`. Use `paths` alone with paths relative to the tsconfig file (already configured this way in `frontend/tsconfig.app.json`).
 - **Vite dev server says "Port 5173 is in use" and picks 5174.** Usually a previous `vite` process didn't fully release the port. Find and kill it: `lsof -ti:5173 | xargs kill`. If nothing's listening but the port is still claimed, give it ~30 seconds for the OS to clear `TIME_WAIT` state, or just use the new port.
