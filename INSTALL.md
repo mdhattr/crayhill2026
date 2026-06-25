@@ -814,17 +814,24 @@ Ordered steps for the very first deploy onto a fresh Amazon Linux 2023 EC2 box. 
 
 ## Routine deploy checklist
 
-Steps for every subsequent deploy of the static frontend after the box is already provisioned.
+Steps for every subsequent deploy of the static frontend after the box is already provisioned. It's a single command:
 
 ```sh
-cd /var/www/crayhill2026
-git pull
-cd frontend
-npm ci             # only needed when dependencies changed
-npm run deploy     # builds, then publishes to the docroot + reloads httpd
+cd /var/www/crayhill2026/frontend
+npm run deploy
 ```
 
-`npm run deploy` (defined in `frontend/package.json`) runs `npm run build` and then `scripts/deploy-ec2.sh`, which republishes `dist/` to the Apache docroot (`/var/www/crayhill`), fixes ownership to `apache`, re-applies SELinux labels when enforcing, and reloads `httpd`. It clears stale files in the docroot first, so deleted assets don't linger. The script uses `sudo` for the docroot/service steps, so it prompts for your password (or runs straight through with passwordless sudo).
+`npm run deploy` (defined in `frontend/package.json`) runs `scripts/deploy-ec2.sh`, which does the whole pipeline in order:
+
+1. `git pull` (fetch + merge) in the repo root.
+2. `npm ci` in `frontend/` — clean, lockfile-exact dependency install.
+3. Re-executes itself with the freshly pulled code (the script is committed, so the pull in step 1 can rewrite it — re-exec guarantees the build/publish steps run the updated version, guarded by the `CRAYHILL_DEPLOY_PULLED` env var so it doesn't loop).
+4. `npm run build` — produces `frontend/dist`.
+5. Publishes `dist/` to the Apache docroot (`/var/www/crayhill`): clears stale files first so deleted assets don't linger, fixes ownership to `apache`, re-applies SELinux labels when enforcing, and reloads `httpd`.
+
+The publish steps use `sudo`, so the command prompts for your password (or runs straight through with passwordless sudo). A `git pull` that hits a merge conflict aborts the deploy before anything is published.
+
+Escape hatch — `CRAYHILL_SKIP_PULL=1 npm run deploy` skips the `git pull` + `npm ci` and just rebuilds and republishes the current working tree (useful when iterating on the box without a new commit).
 
 Override the paths on a box with a different layout:
 
