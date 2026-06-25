@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import { CareersMarkdownBody } from '@/components/CareersMarkdownBody'
 import { LegalMarkdownBody } from '@/components/LegalMarkdownBody'
 import { NewsMarkdownBody } from '@/components/NewsMarkdownBody'
@@ -150,10 +150,20 @@ export function MarkdownEditorWithPreview({
     runEdit(action)
   }
 
-  function handleLinkSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  function handleLinkInsert() {
     runEdit('link', linkUrl)
     setLinkOpen(false)
+  }
+
+  function handleLinkKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      handleLinkInsert()
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      setLinkOpen(false)
+    }
   }
 
   return (
@@ -250,9 +260,7 @@ export function MarkdownEditorWithPreview({
               </div>
 
               {linkOpen ? (
-                <form
-                  id={linkFormId}
-                  onSubmit={handleLinkSubmit}
+                <div
                   className={
                     'absolute left-2 right-2 top-full z-10 mt-1 ' +
                     'rounded border border-rule bg-paper p-3 shadow-sm'
@@ -267,10 +275,10 @@ export function MarkdownEditorWithPreview({
                   <input
                     id={`${linkFormId}-url`}
                     type="url"
-                    required
                     autoFocus
                     value={linkUrl}
                     onChange={(event) => setLinkUrl(event.target.value)}
+                    onKeyDown={handleLinkKeyDown}
                     placeholder="https://example.com"
                     className={
                       'mt-1 w-full rounded border border-rule bg-paper px-3 py-2 ' +
@@ -279,7 +287,8 @@ export function MarkdownEditorWithPreview({
                   />
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
-                      type="submit"
+                      type="button"
+                      onClick={handleLinkInsert}
                       className="rounded bg-paper-deep px-3 py-1.5 text-body-3 text-paper hover:opacity-90"
                     >
                       Insert link
@@ -292,7 +301,7 @@ export function MarkdownEditorWithPreview({
                       Cancel
                     </button>
                   </div>
-                </form>
+                </div>
               ) : null}
             </div>
 

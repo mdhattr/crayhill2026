@@ -105,7 +105,7 @@ try {
 
         $sortOrder = team_parse_sort_order($body['sort_order'] ?? null);
         if ($sortOrder === null) {
-            $errors['sort_order'] = 'Display order must be a whole number.';
+            $errors['sort_order'] = 'Display order must be 1 or greater.';
         }
 
         if ($errors !== []) {
@@ -171,7 +171,7 @@ try {
         if (array_key_exists('sort_order', $body)) {
             $sortOrder = team_parse_sort_order($body['sort_order']);
             if ($sortOrder === null) {
-                $errors['sort_order'] = 'Display order must be a whole number.';
+                $errors['sort_order'] = 'Display order must be 1 or greater.';
             }
         }
 

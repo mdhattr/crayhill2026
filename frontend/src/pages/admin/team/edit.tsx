@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
   useAdminTeamList,
@@ -27,7 +27,7 @@ function emptyForm(roster: TeamRoster, sortOrder = SORT_ORDER_MIN): AdminTeamWri
     name: '',
     card_title: '',
     full_title: '',
-    image_src: '/images/',
+    image_src: '',
     email: null,
     linkedin_url: null,
     roster,
@@ -65,6 +65,17 @@ export default function AdminTeamEditPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [sortOrderSeeded, setSortOrderSeeded] = useState(false)
+  const formErrorRef = useRef<HTMLParagraphElement>(null)
+
+  const routeKey = isCreate ? `create:${roster}` : `edit:${memberId ?? 'invalid'}`
+
+  useEffect(() => {
+    if (!isCreate) return
+    setForm(emptyForm(roster))
+    setFieldErrors({})
+    setFormError(null)
+    setSortOrderSeeded(false)
+  }, [routeKey, isCreate, roster])
 
   useEffect(() => {
     if (member) {
@@ -109,6 +120,31 @@ export default function AdminTeamEditPage() {
     })
   }
 
+  function validateClientPayload(payload: AdminTeamWritePayload): Record<string, string> {
+    const errors: Record<string, string> = {}
+
+    if (!payload.name) errors.name = 'Name is required.'
+    if (!payload.slug) {
+      errors.slug = 'Slug is required.'
+    } else if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(payload.slug)) {
+      errors.slug = 'Slug must use lowercase letters, numbers, and hyphens only.'
+    }
+    if (!payload.card_title) errors.card_title = 'Card title is required.'
+    if (!payload.full_title) errors.full_title = 'Full title is required.'
+    if (!payload.image_src) {
+      errors.image_src = 'Image path is required.'
+    } else if (!payload.image_src.startsWith('/images/') || payload.image_src.length <= '/images/'.length) {
+      errors.image_src =
+        'Image path must include a filename under /images/, e.g. /images/headshot-name.jpg.'
+    }
+    if (!payload.content.trim()) errors.content = 'Content is required.'
+    if (!Number.isFinite(payload.sort_order) || payload.sort_order < 1) {
+      errors.sort_order = 'Display order must be 1 or greater.'
+    }
+
+    return errors
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setFormError(null)
@@ -133,6 +169,14 @@ export default function AdminTeamEditPage() {
       roster,
     }
 
+    const clientErrors = validateClientPayload(payload)
+    if (Object.keys(clientErrors).length > 0) {
+      setFieldErrors(clientErrors)
+      setFormError('Please fix the highlighted fields.')
+      formErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      return
+    }
+
     try {
       if (isCreate) {
         const created = await createMember.mutateAsync(payload)
@@ -153,9 +197,11 @@ export default function AdminTeamEditPage() {
         if (cause.fields) {
           setFieldErrors(cause.fields)
         }
+        formErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
         return
       }
       setFormError('Unable to save this member. Try again.')
+      formErrorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
   }
 
@@ -200,7 +246,11 @@ export default function AdminTeamEditPage() {
           {(isCreate || member) && !invalidId ? (
             <form className="mt-element space-y-8" onSubmit={handleSubmit} noValidate>
               {formError ? (
-                <p className="text-body-2 text-accent-navy" role="alert">
+                <p
+                  ref={formErrorRef}
+                  className="text-body-2 text-accent-navy"
+                  role="alert"
+                >
                   {formError}
                 </p>
               ) : null}

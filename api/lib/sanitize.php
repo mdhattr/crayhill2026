@@ -133,6 +133,10 @@ function validate_image_src_path(mixed $value, bool $required = false): ?string
         return 'Image path must be 512 characters or fewer.';
     }
 
+    if (strlen($path) <= strlen('/images/')) {
+        return 'Image path must include a filename under /images/, e.g. /images/headshot-name.jpg.';
+    }
+
     if (preg_match('/[\x00-\x1F\x7F<>"]/', $path) === 1) {
         return 'Image path contains invalid characters.';
     }

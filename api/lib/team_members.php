@@ -163,6 +163,8 @@ function team_validate_write_fields(array $body, bool $requireAll): array
     if ($requireAll || $has('sort_order')) {
         if (!array_key_exists('sort_order', $body) || !is_numeric($body['sort_order'])) {
             $errors['sort_order'] = 'Display order must be a whole number.';
+        } elseif ((int) $body['sort_order'] < 1) {
+            $errors['sort_order'] = 'Display order must be 1 or greater.';
         }
     }
 
@@ -192,7 +194,9 @@ function team_parse_sort_order(mixed $value): ?int
         return null;
     }
 
-    return (int) $value;
+    $order = (int) $value;
+
+    return $order >= 1 ? $order : null;
 }
 
 function team_nullable_string(mixed $value): ?string
