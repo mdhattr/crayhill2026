@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/sanitize.php';
+
 /**
  * Shared team member helpers for public and admin endpoints.
  */
@@ -87,16 +89,14 @@ function team_validate_write_fields(array $body, bool $requireAll): array
     $has = static fn (string $key): bool => array_key_exists($key, $body);
 
     if ($requireAll || $has('name')) {
-        $name = trim((string) ($body['name'] ?? ''));
-        if ($name === '') {
-            $errors['name'] = 'Name is required.';
-        } elseif (mb_strlen($name) > 255) {
-            $errors['name'] = 'Name must be 255 characters or fewer.';
+        $error = validate_clean_text_field((string) ($body['name'] ?? ''), 'Name', 255, $requireAll);
+        if ($error !== null) {
+            $errors['name'] = $error;
         }
     }
 
     if ($requireAll || $has('slug')) {
-        $slug = trim((string) ($body['slug'] ?? ''));
+        $slug = trim(sanitize_text_field((string) ($body['slug'] ?? '')));
         if ($slug === '') {
             $errors['slug'] = 'Slug is required.';
         } elseif (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug)) {
@@ -107,55 +107,47 @@ function team_validate_write_fields(array $body, bool $requireAll): array
     }
 
     if ($requireAll || $has('card_title')) {
-        $cardTitle = trim((string) ($body['card_title'] ?? ''));
-        if ($cardTitle === '') {
-            $errors['card_title'] = 'Card title is required.';
-        } elseif (mb_strlen($cardTitle) > 255) {
-            $errors['card_title'] = 'Card title must be 255 characters or fewer.';
+        $error = validate_clean_text_field(
+            (string) ($body['card_title'] ?? ''),
+            'Card title',
+            255,
+            $requireAll,
+        );
+        if ($error !== null) {
+            $errors['card_title'] = $error;
         }
     }
 
     if ($requireAll || $has('full_title')) {
-        $fullTitle = trim((string) ($body['full_title'] ?? ''));
-        if ($fullTitle === '') {
-            $errors['full_title'] = 'Full title is required.';
-        } elseif (mb_strlen($fullTitle) > 512) {
-            $errors['full_title'] = 'Full title must be 512 characters or fewer.';
+        $error = validate_clean_text_field(
+            (string) ($body['full_title'] ?? ''),
+            'Full title',
+            512,
+            $requireAll,
+        );
+        if ($error !== null) {
+            $errors['full_title'] = $error;
         }
     }
 
     if ($requireAll || $has('image_src')) {
-        $imageSrc = trim((string) ($body['image_src'] ?? ''));
-        if ($imageSrc === '') {
-            $errors['image_src'] = 'Headshot path is required.';
-        } elseif (!str_starts_with($imageSrc, '/images/')) {
-            $errors['image_src'] = 'Headshot path must start with /images/.';
-        } elseif (strlen($imageSrc) > 512) {
-            $errors['image_src'] = 'Headshot path must be 512 characters or fewer.';
+        $error = validate_image_src_path($body['image_src'] ?? '', $requireAll);
+        if ($error !== null) {
+            $errors['image_src'] = $error;
         }
     }
 
     if ($requireAll || $has('email')) {
-        $email = $body['email'] ?? null;
-        if ($email !== null && trim((string) $email) !== '') {
-            $email = trim((string) $email);
-            if (mb_strlen($email) > 255) {
-                $errors['email'] = 'Email must be 255 characters or fewer.';
-            } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $errors['email'] = 'Enter a valid email address.';
-            }
+        $error = validate_email_address($body['email'] ?? null, false);
+        if ($error !== null) {
+            $errors['email'] = $error;
         }
     }
 
     if ($requireAll || $has('linkedin_url')) {
-        $linkedin = $body['linkedin_url'] ?? null;
-        if ($linkedin !== null && trim((string) $linkedin) !== '') {
-            $linkedin = trim((string) $linkedin);
-            if (strlen($linkedin) > 512) {
-                $errors['linkedin_url'] = 'LinkedIn URL must be 512 characters or fewer.';
-            } elseif (!filter_var($linkedin, FILTER_VALIDATE_URL)) {
-                $errors['linkedin_url'] = 'Enter a valid URL.';
-            }
+        $error = validate_http_url($body['linkedin_url'] ?? null, false);
+        if ($error !== null) {
+            $errors['linkedin_url'] = $error;
         }
     }
 
@@ -185,8 +177,9 @@ function team_validate_write_fields(array $body, bool $requireAll): array
 
     if ($requireAll || $has('content')) {
         $content = (string) ($body['content'] ?? '');
-        if ($requireAll && trim($content) === '') {
-            $errors['content'] = 'Bio content is required.';
+        $error = validate_markdown_content($content, $requireAll);
+        if ($error !== null) {
+            $errors['content'] = $error;
         }
     }
 
@@ -204,11 +197,5 @@ function team_parse_sort_order(mixed $value): ?int
 
 function team_nullable_string(mixed $value): ?string
 {
-    if ($value === null) {
-        return null;
-    }
-
-    $trimmed = trim((string) $value);
-
-    return $trimmed === '' ? null : $trimmed;
+    return sanitize_optional_text($value);
 }

@@ -1,17 +1,15 @@
 -- Migration: 2026_06_24_003_create_news
 --
 -- Creates the `news` table that backs the News & Insights content domain.
--- Seeded from api/seeds/news_seed.sql (the cleaned legacy WordPress posts,
--- loaded via the mysql client) and served through GET /api/v1/news.
+-- Content lives in RDS; served through GET /api/v1/news.
 --
 -- ID strategy (per .cursor/rules/20-php-api.mdc): integer auto-increment
 -- surrogate key. The legacy WordPress post IDs are intentionally discarded;
 -- the unique `slug` is the stable external identifier used in URLs and as the
--- upsert key for the seed loader.
+-- upsert key when importing or deduplicating rows.
 --
 -- status: 'published' rows are eligible to appear on the site; 'draft' rows
--- are held back. New rows default to 'draft'; the seed loader sets the legacy
--- posts to 'published' explicitly (they were already live).
+-- are held back. New rows default to 'draft'; publish via CMS or direct DB update.
 --
 -- Charset / collation: utf8mb4 / utf8mb4_unicode_ci, per the project rule.
 --

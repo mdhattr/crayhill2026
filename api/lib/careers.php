@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/sanitize.php';
+
 /**
  * Shared Careers helpers used by the public and admin endpoints.
  */
@@ -49,11 +51,10 @@ function careers_validate_write_fields(array $body, bool $requireAll): array
     $has = static fn (string $key): bool => array_key_exists($key, $body);
 
     if ($requireAll || $has('title')) {
-        $title = trim((string) ($body['title'] ?? ''));
-        if ($title === '') {
-            $errors['title'] = 'Title is required.';
-        } elseif (mb_strlen($title) > 255) {
-            $errors['title'] = 'Title must be 255 characters or fewer.';
+        $title = (string) ($body['title'] ?? '');
+        $error = validate_clean_text_field($title, 'Title', 255, $requireAll);
+        if ($error !== null) {
+            $errors['title'] = $error;
         }
     }
 
@@ -70,9 +71,10 @@ function careers_validate_write_fields(array $body, bool $requireAll): array
 
     if ($requireAll || $has('location')) {
         if ($body['location'] !== null) {
-            $location = trim((string) ($body['location'] ?? ''));
-            if ($location !== '' && mb_strlen($location) > 255) {
-                $errors['location'] = 'Location must be 255 characters or fewer.';
+            $location = (string) ($body['location'] ?? '');
+            $error = validate_clean_text_field($location, 'Location', 255, false);
+            if ($error !== null) {
+                $errors['location'] = $error;
             }
         }
     }
@@ -94,8 +96,9 @@ function careers_validate_write_fields(array $body, bool $requireAll): array
 
     if ($requireAll || $has('content')) {
         $content = (string) ($body['content'] ?? '');
-        if ($requireAll && trim($content) === '') {
-            $errors['content'] = 'Content is required.';
+        $error = validate_markdown_content($content, $requireAll);
+        if ($error !== null) {
+            $errors['content'] = $error;
         }
     }
 

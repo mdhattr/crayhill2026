@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { isSafeMarkdownHref, SAFE_MARKDOWN_COMPONENTS } from '@/lib/safe-markdown'
 
 type LegalMarkdownBodyProps = {
   content: string
@@ -25,15 +26,21 @@ export function LegalMarkdownBody({
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
+          ...SAFE_MARKDOWN_COMPONENTS,
           a({ href, children }) {
-            if (href?.startsWith('/')) {
+            if (href && isSafeMarkdownHref(href) && href.startsWith('/')) {
               return <Link to={href}>{children}</Link>
             }
-            return (
-              <a href={href} target="_blank" rel="noopener noreferrer">
-                {children}
-              </a>
-            )
+
+            if (href && isSafeMarkdownHref(href)) {
+              return (
+                <a href={href} target="_blank" rel="noopener noreferrer">
+                  {children}
+                </a>
+              )
+            }
+
+            return <span>{children}</span>
           },
         }}
       >

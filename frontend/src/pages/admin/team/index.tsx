@@ -237,9 +237,7 @@ export default function AdminTeamListPage() {
               >
                 Create the first member
               </Link>
-              , or run{' '}
-              <code className="text-ink">php api/seeds/load_team_members.php</code>{' '}
-              from the repo root if you expected seeded data.
+              .
             </p>
           ) : null}
 

@@ -2,7 +2,7 @@
 
 This is the living install / deploy runbook for the Crayhill rebrand. It grows with the project — every change that adds a dependency, env var, build step, or system requirement updates this file in the same commit.
 
-> **Status (current):** Frontend scaffold (React + Vite + TS + Tailwind v4 + React Router + brand type scale with both fonts live — Montserrat self-hosted via `@fontsource`, New Science via Adobe Fonts / Typekit + global `TopNav`) + PHP API (`GET /api/v1/health`, `GET /api/v1/news`, `GET /api/v1/careers`) + MariaDB schema `crayhill` with least-privilege app user `crayhill_app` and seeded `news` / `careers` tables on RDS + designer-delivered brand assets staged in `assets/` and served via Vite's `publicDir`. **News & Insights** and **Careers** are DB-backed via TanStack Query + the typed client in `frontend/src/api/`. The static frontend `dist/` is deployed to an Amazon Linux 2023 EC2 instance and served over plain HTTP by Apache (see "EC2 deployment"). **PHP-FPM + `/api` routing is scripted** (`scripts/setup-api-ec2.sh`) but must be run once on the box — until then Apache's SPA `FallbackResource` serves `index.html` for `/api/v1/*` and those pages show no data. HTTPS (certbot) is still pending.
+> **Status (current):** Frontend scaffold (React + Vite + TS + Tailwind v4 + React Router + brand type scale with both fonts live — Montserrat self-hosted via `@fontsource`, New Science via Adobe Fonts / Typekit + global `TopNav`) + PHP API (`GET /api/v1/health`, `GET /api/v1/news`, `GET /api/v1/careers`, `GET /api/v1/team`, `GET /api/v1/pages`) + MariaDB schema `crayhill` on RDS with CMS-backed content domains (news, careers, team, site pages) + designer-delivered brand assets staged in `assets/` and served via Vite's `publicDir`. Public pages and the admin CMS consume DB content via TanStack Query + the typed client in `frontend/src/api/`. The static frontend `dist/` is deployed to an Amazon Linux 2023 EC2 instance and served over plain HTTP by Apache (see "EC2 deployment"). **PHP-FPM + `/api` routing is scripted** (`scripts/setup-api-ec2.sh`) but must be run once on the box — until then Apache's SPA `FallbackResource` serves `index.html` for `/api/v1/*` and those pages show no data. HTTPS (certbot) is still pending.
 
 ---
 
@@ -123,16 +123,9 @@ Expected response (DB connectivity may vary depending on your network — see Tr
 >
 > `npm run dev:api` runs `scripts/dev-api.sh`, which starts `php -S 127.0.0.1:8000 -t api`. RDS must be reachable from your machine (see "AWS RDS access for local development"). If only `npm run dev` is running, Vite logs `[vite] http proxy error: /v1/news.php ECONNREFUSED` and those pages show loading/error states.
 
-### 5. Load DB content (one-time per environment)
+### 5. Database content
 
-If Leadership / Senior Investment Professionals (or their admin lists) are empty locally, the `team_members` table likely has not been created or seeded yet. From the repo root, with `.config/secrets.env` filled in and RDS reachable:
-
-```sh
-php api/lib/migrate.php 2026_06_25_006_create_team_members.sql
-php api/seeds/load_team_members.php
-```
-
-The loader is idempotent — safe to re-run. See **Database setup → Seed data** for news, careers, and site pages as well.
+News, careers, team rosters, and legal/privacy copy are stored in RDS, not in the repo. After migrations have run, content appears automatically if your `.config/secrets.env` points at an RDS instance that already has rows. If tables are empty, use the CMS at `/admin` or restore a database dump from an environment that has content. See **Database setup → CMS content**.
 
 ### Frontend scripts
 
@@ -273,7 +266,7 @@ Canonical record of the brand type scale, taken from the designer's hand-off. Th
 | H4 | `<h4>` / `text-h4` | New Science via `--font-display` | Regular / 400 | 22px | 28px | Title Case |
 | H5 | `<h5>` / `text-h5` | Montserrat via `--font-sans` (immune to NS swap) | SemiBold / 600 | 18px | 22px | UPPERCASE, 0.02em tracking |
 | Body 1 | `<body>` / `<p>` default / `text-body-1` | Montserrat via `--font-sans` | Regular / 400 | 18px | 27px | Sentence case |
-| Body 2 | `text-body-2` utility | Montserrat via `--font-sans` | Regular / 400 | 16px | 19px | Sentence case |
+| Body 2 | `text-body-2` utility | Montserrat via `--font-sans` | Regular / 400 | 16px | 21px | Sentence case |
 | Body 3 | `text-body-3` utility | Montserrat via `--font-sans` | Regular / 400 | 12px | 15px | Sentence case |
 
 Notes on this scale:
@@ -420,14 +413,11 @@ api/
 │   ├── migrate.php              # admin-credential DDL runner
 │   ├── session.php              # CMS PHP session cookie helpers
 │   ├── auth.php                 # CMS credential check + auth guard
-│   └── request.php              # JSON body reader for POST endpoints
+│   ├── request.php              # JSON body reader for POST endpoints
+│   └── sanitize.php             # CMS input sanitization + Markdown content policy
 ├── migrations/                  # numbered, dated schema migrations
 ├── seeds/
-│   ├── news_seed.sql            # committed reproducible seed for the news table
-│   ├── careers_seed.sql         # committed reproducible seed for the careers table
-│   ├── site_pages_seed.sql      # legal notice + privacy policy copy
-│   ├── team_members_data.php    # team roster seed data (PHP array)
-│   └── load_team_members.php    # CLI loader for team_members_data.php
+│   └── README.md                # content lives in RDS; no committed seed files
 └── v1/
     ├── health.php               # GET /api/v1/health — smoke check
     ├── news.php                 # GET /api/v1/news (list) + ?slug=<x> (detail)
@@ -468,7 +458,7 @@ api/
 | `DELETE /api/v1/admin/careers?id=<id>` | `api/v1/admin/careers.php` | Permanently deletes a posting (`{ deleted: true, id }`). |
 | `GET /api/v1/admin/pages` | `api/v1/admin/pages.php` | All provisioned site pages: `{ id, slug, title, subtitle, status, updated_at }[]`. Requires CMS session. |
 | `GET /api/v1/admin/pages?slug=<slug>` | `api/v1/admin/pages.php` | Single page for editing, including Markdown `content` and `meta_description`. |
-| `PATCH /api/v1/admin/pages` | `api/v1/admin/pages.php` | Update a page. Body must include `id`; other fields are partial. No create/delete — pages are seeded. |
+| `PATCH /api/v1/admin/pages` | `api/v1/admin/pages.php` | Update a page. Body must include `id`; other fields are partial. No create/delete — pages are provisioned in the database (fixed slug allowlist). |
 | `GET /api/v1/team?roster=<roster>` | `api/v1/team.php` | Published roster grid for `leadership` or `senior-investment-professionals`: `{ slug, name, title, imageSrc }[]` with `meta.count`. |
 | `GET /api/v1/team?roster=<roster>&slug=<x>` | `api/v1/team.php` | One published bio with Markdown `content`, contact fields, and `rosterPath`; `404 NOT_FOUND` if missing/draft/wrong roster. |
 | `GET /api/v1/admin/team?roster=<roster>` | `api/v1/admin/team.php` | All non-deleted members for one roster (draft + published), in `sort_order`. Requires CMS session. |
@@ -486,6 +476,7 @@ Full response shapes and curl examples live in `docs/data-flow.md` → "News & I
 - All DB access goes through PDO with prepared statements. `PDO::ATTR_EMULATE_PREPARES = false`. `PDO::ATTR_ERRMODE = ERRMODE_EXCEPTION`.
 - **All RDS connections use TLS** with verified server certificates: `PDO::MYSQL_ATTR_SSL_CA` points at `api/certs/aws-rds-ca-bundle.pem` and `PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT = true`. No bypass for local debugging — use a local docker MySQL if you need plaintext.
 - All secrets read via `env()` / `env_required()` from `api/lib/env.php`. Nothing else reads `.config/secrets.env`.
+- **CMS writes are sanitized server-side** in `api/lib/sanitize.php`: text fields strip control characters; Markdown rejects HTML, code blocks, inline code, and unsafe URL schemes; emails, http(s) URLs, and `/images/` paths are validated before storage. SQL injection is mitigated separately by prepared statements.
 - Error responses sent to the client never include SQL, stack traces, or hostnames. Underlying details go to `error_log` only.
 
 ### AWS RDS CA bundle
@@ -596,8 +587,8 @@ There is currently **no tracking table** for "which migrations have run." Filena
    php api/lib/migrate.php 2026_04_28_002_create_app_user.sql
    ```
 6. Run all subsequent migrations in filename order (e.g. `php api/lib/migrate.php 2026_06_24_003_create_news.sql`, then `004`, `005`, `006`, …).
-7. Seed any content domains that ship with data — News & Insights, Careers, site pages, and team rosters (see "Seed data" below): load the SQL seeds via the `mysql` client and run `php api/seeds/load_team_members.php` for team data.
-8. Verify with the health endpoint — `database.selected_schema` should report `"crayhill"` and a separate `CURRENT_USER()` query should return `crayhill_app@%` — then `curl http://127.0.0.1:8000/v1/news.php` and `curl http://127.0.0.1:8000/v1/careers.php` should return the seeded rows.
+7. Ensure CMS content exists — either point at an RDS instance that already has rows, restore a `mysqldump` of `crayhill`, or enter content via `/admin` (see **CMS content** below).
+8. Verify with the health endpoint — `database.selected_schema` should report `"crayhill"` and a separate `CURRENT_USER()` query should return `crayhill_app@%` — then `curl http://127.0.0.1:8000/v1/news.php` and `curl http://127.0.0.1:8000/v1/careers.php` should return published rows when content is present.
 
 #### Rotating the app user password
 
@@ -610,54 +601,31 @@ php api/lib/migrate.php 2026_04_28_002_create_app_user.sql
 # 3. Restart the API process so it reloads secrets.env.
 ```
 
-### Seed data
+### CMS content
 
-**News & Insights** is the first seeded domain. The cleaned legacy posts are committed as `api/seeds/news_seed.sql` — a single idempotent `INSERT ... ON DUPLICATE KEY UPDATE` keyed on the unique `slug`. (Provenance: a one-time WordPress dump was cleaned to Markdown by `scripts/clean-wp-posts.mjs` into a CSV, then exported to this SQL seed; the raw dump and CSV were removed from the repo and backed up offline — the DB is now the source of truth.) Load it into the `news` table — created by migration `003` above — with the `mysql` client:
+News, careers, team rosters, and legal/privacy page copy live in **RDS** — not in committed seed files. After migrations have run, content appears automatically if your `.config/secrets.env` points at an RDS instance that already has rows.
 
-```sh
-# from the repo root, after migration 003 has run.
-# Uses the same RDS host/credentials as the API; load with whichever user
-# has INSERT on crayhill.* (the app user is sufficient).
-mysql --host="$DB_HOST" --port="${DB_PORT:-3306}" \
-      --user="$DB_USER" --password \
-      --ssl-ca=api/certs/aws-rds-ca-bundle.pem \
-      crayhill < api/seeds/news_seed.sql
-```
+**Editing content:** use the CMS at `/admin` (News, Careers, Leadership, Senior Investment Professionals, Legal Notice, Privacy Policy).
 
-Idempotent — safe to re-run; existing rows (matched by `slug`) update, new rows insert.
+**Bootstrapping a fresh database** (empty tables after migrations):
 
-**Careers** is the second seeded domain. The open job postings are committed as `api/seeds/careers_seed.sql` — same idempotent `INSERT ... ON DUPLICATE KEY UPDATE` keyed on the unique `slug`. (Provenance: a one-time scrape of the legacy crayhill.com Careers listing + job detail pages, converted to Markdown. The DB is now the source of truth; edit the seed/table directly rather than re-scraping.) Load it into the `careers` table — created by migration `004` above — the same way:
+1. **Share RDS** — point local/staging `.config/secrets.env` at the same RDS instance as an environment that already has content (typical for this project).
+2. **Restore a dump** — from a machine with content, export and import:
+   ```sh
+   mysqldump --host="$DB_HOST" --port="${DB_PORT:-3306}" \
+     --user="$DB_USER" --password \
+     --ssl-ca=api/certs/aws-rds-ca-bundle.pem \
+     --single-transaction --routines=false --triggers=false \
+     crayhill news careers site_pages team_members > crayhill-content.sql
 
-```sh
-# from the repo root, after migration 004 has run.
-mysql --host="$DB_HOST" --port="${DB_PORT:-3306}" \
-      --user="$DB_USER" --password \
-      --ssl-ca=api/certs/aws-rds-ca-bundle.pem \
-      crayhill < api/seeds/careers_seed.sql
-```
+   mysql --host="$DB_HOST" --port="${DB_PORT:-3306}" \
+     --user="$DB_USER" --password \
+     --ssl-ca=api/certs/aws-rds-ca-bundle.pem \
+     crayhill < crayhill-content.sql
+   ```
+3. **Enter via CMS** — create rows manually through `/admin` (slower; fine for one-off testing).
 
-**Site pages** (Legal Notice & Disclosures, Privacy Policy) are seeded as `api/seeds/site_pages_seed.sql` into the `site_pages` table — migration `005`. Readable Markdown sources live in `api/seeds/content/*.md`. Load the same way:
-
-```sh
-# from the repo root, after migration 005 has run.
-mysql --host="$DB_HOST" --port="${DB_PORT:-3306}" \
-      --user="$DB_USER" --password \
-      --ssl-ca=api/certs/aws-rds-ca-bundle.pem \
-      crayhill < api/seeds/site_pages_seed.sql
-```
-
-**Team rosters** (Leadership and Senior Investment Professionals) are seeded into the `team_members` table — migration `006`. Seed data lives in `api/seeds/team_members_data.php` (PHP array, avoids semicolon issues in long bio copy). Load via the PHP loader (uses runtime app credentials from `.config/secrets.env`):
-
-```sh
-# from the repo root, after migration 006 has run.
-php api/seeds/load_team_members.php
-```
-
-Idempotent — upserts on unique `slug`; safe to re-run. After the first load, edit via the CMS or hand-edit `api/seeds/team_members_data.php` to reprovision.
-
-> **Why a `mysql`-loaded seed and not a `*_seed_*.sql` migration through `api/lib/migrate.php`:** the migration runner splits files naively on `;`, and the Markdown post content is full of semicolons — raw `INSERT` SQL would break apart mid-statement. The real `mysql` client parses string literals correctly, so the content survives intact. Team bios use a PHP loader for the same reason. Small, semicolon-free reference data can still use a numbered `*_seed_*.sql` migration via the runner.
-
-> **Regenerating after content edits:** edit the rows directly in the DB (the source of truth) or hand-edit `api/seeds/news_seed.sql`. The original CSV-based cleaning pipeline (`scripts/clean-wp-posts.mjs`) is retained for provenance but its inputs are no longer in the repo.
+Historical note: initial rows were loaded once from WordPress export, legacy site scrape, and former hardcoded frontend copy. Those one-time pipelines and committed seed files have been removed; **the database is the sole source of truth.**
 
 ---
 

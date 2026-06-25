@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/sanitize.php';
+
 /**
  * Shared News & Insights helpers used by the public and admin endpoints.
  */
@@ -94,16 +96,15 @@ function news_validate_write_fields(array $body, bool $requireAll): array
     $has = static fn (string $key): bool => array_key_exists($key, $body);
 
     if ($requireAll || $has('title')) {
-        $title = trim((string) ($body['title'] ?? ''));
-        if ($title === '') {
-            $errors['title'] = 'Title is required.';
-        } elseif (mb_strlen($title) > 512) {
-            $errors['title'] = 'Title must be 512 characters or fewer.';
+        $title = (string) ($body['title'] ?? '');
+        $error = validate_clean_text_field($title, 'Title', 512, $requireAll);
+        if ($error !== null) {
+            $errors['title'] = $error;
         }
     }
 
     if ($requireAll || $has('slug')) {
-        $slug = trim((string) ($body['slug'] ?? ''));
+        $slug = trim(sanitize_text_field((string) ($body['slug'] ?? '')));
         if ($slug === '') {
             $errors['slug'] = 'Slug is required.';
         } elseif (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug)) {
@@ -114,11 +115,10 @@ function news_validate_write_fields(array $body, bool $requireAll): array
     }
 
     if ($requireAll || $has('author')) {
-        $author = trim((string) ($body['author'] ?? ''));
-        if ($requireAll && $author === '') {
-            $errors['author'] = 'Author is required.';
-        } elseif ($author !== '' && mb_strlen($author) > 255) {
-            $errors['author'] = 'Author must be 255 characters or fewer.';
+        $author = (string) ($body['author'] ?? '');
+        $error = validate_clean_text_field($author, 'Author', 255, $requireAll);
+        if ($error !== null) {
+            $errors['author'] = $error;
         }
     }
 
@@ -145,15 +145,20 @@ function news_validate_write_fields(array $body, bool $requireAll): array
 
     if ($requireAll || $has('content')) {
         $content = (string) ($body['content'] ?? '');
-        if ($requireAll && trim($content) === '') {
-            $errors['content'] = 'Content is required.';
+        $error = validate_markdown_content($content, $requireAll);
+        if ($error !== null) {
+            $errors['content'] = $error;
         }
     }
 
-    if ($has('image') && $body['image'] !== null) {
-        $image = trim((string) $body['image']);
-        if ($image !== '' && strlen($image) > 512) {
-            $errors['image'] = 'Image path must be 512 characters or fewer.';
+    if ($has('image')) {
+        if ($body['image'] === null || trim((string) $body['image']) === '') {
+            // Optional image path.
+        } else {
+            $error = validate_image_src_path($body['image'], false);
+            if ($error !== null) {
+                $errors['image'] = $error;
+            }
         }
     }
 

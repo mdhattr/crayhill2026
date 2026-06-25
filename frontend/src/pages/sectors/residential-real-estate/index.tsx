@@ -56,10 +56,11 @@ const TRANSACTIONS: ReadonlyArray<Transaction> = [
  *
  * Page composition (top to bottom):
  *
- *   1. Title — <section> on --color-paper-deep (#293A51). Centered H1
- *      "Residential Real Estate" in white. Standard module padding.
+ *   1. Title — <section> on --color-paper-dark (#1B2636). Centered H1
+ *      "Residential Real Estate" in white. `pt-module pb-element`
+ *      (120/90), matching the other sector title banners.
  *
- *   2. Intro — <section> on --color-paper-dark (#1B2636). Two columns
+ *   2. Intro — <section> on --color-paper-deep (#293A51). Two columns
  *      on md+: left H3 description in white, right single hero image
  *      (sectors-res-real-estate-hero.jpg), zooms slightly on hover.
  *      `py-[90px]` per designer's explicit module padding annotation.
@@ -90,7 +91,7 @@ export default function ResidentialRealEstatePage() {
         description={residentialRealEstateMeta.description}
       />
       <main>
-        <section className="bg-paper-deep px-6 py-module sm:px-10">
+        <section className="bg-paper-dark px-6 pt-module pb-element sm:px-10">
           <div className="mx-auto max-w-7xl">
             <h1 className="text-center text-white">Residential Real Estate</h1>
           </div>
@@ -101,7 +102,7 @@ export default function ResidentialRealEstatePage() {
          * padding (deviation from the 120px standard, same
          * convention used on Power & Infrastructure Section 2).
          */}
-        <section className="bg-paper-dark px-6 py-[60px] sm:px-10 md:py-[90px]">
+        <section className="bg-paper-deep px-6 py-[60px] sm:px-10 md:py-[90px]">
           <div className="mx-auto max-w-7xl">
             <div
               className={

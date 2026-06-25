@@ -1,5 +1,6 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { SAFE_MARKDOWN_COMPONENTS } from '@/lib/safe-markdown'
 
 type TeamBioMarkdownBodyProps = {
   /** Markdown source. Renders nothing when empty or whitespace-only. */
@@ -26,6 +27,7 @@ export function TeamBioMarkdownBody({
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
+          ...SAFE_MARKDOWN_COMPONENTS,
           p: ({ children }) => <p className="mb-6 text-ink">{children}</p>,
         }}
       >

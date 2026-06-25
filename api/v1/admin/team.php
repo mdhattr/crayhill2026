@@ -130,16 +130,16 @@ try {
         );
         $stmt->execute([
             ':slug' => $slug,
-            ':name' => trim((string) $body['name']),
-            ':card_title' => trim((string) $body['card_title']),
-            ':full_title' => trim((string) $body['full_title']),
-            ':image_src' => trim((string) $body['image_src']),
+            ':name' => prepare_stored_text($body['name']),
+            ':card_title' => prepare_stored_text($body['card_title']),
+            ':full_title' => prepare_stored_text($body['full_title']),
+            ':image_src' => prepare_stored_text($body['image_src']),
             ':email' => team_nullable_string($body['email'] ?? null),
             ':linkedin_url' => team_nullable_string($body['linkedin_url'] ?? null),
-            ':roster' => trim((string) $body['roster']),
+            ':roster' => prepare_stored_text($body['roster']),
             ':sort_order' => $sortOrder,
-            ':status' => trim((string) $body['status']),
-            ':content' => (string) $body['content'],
+            ':status' => prepare_stored_text($body['status']),
+            ':content' => prepare_stored_markdown($body['content']),
         ]);
 
         $newId = (int) $pdo->lastInsertId();
@@ -204,7 +204,7 @@ try {
         foreach ($stringFields as $bodyKey => $column) {
             if (array_key_exists($bodyKey, $body)) {
                 $updates[] = $column . ' = :' . $column;
-                $params[':' . $column] = trim((string) $body[$bodyKey]);
+                $params[':' . $column] = prepare_stored_text($body[$bodyKey]);
             }
         }
 
@@ -222,7 +222,7 @@ try {
         }
         if (array_key_exists('content', $body)) {
             $updates[] = 'content = :content';
-            $params[':content'] = (string) $body['content'];
+            $params[':content'] = prepare_stored_markdown($body['content']);
         }
 
         if ($updates === []) {

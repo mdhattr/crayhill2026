@@ -25,11 +25,11 @@ Boundaries (from `.cursor/rules/00-project.mdc`): the SPA talks to the backend o
 
 | Domain | Current source | Target source | Migration trigger |
 |---|---|---|---|
-| News & Insights | **`news` table on RDS.** Public reads via `GET /api/v1/news`; CMS writes via authenticated `/api/v1/admin/news` (list, create, edit, status toggle, permanent delete). Seeded from [api/seeds/news_seed.sql](../api/seeds/news_seed.sql). | Same table with admin image uploads and audit trail **[planned]** | When image upload + audit ship |
-| Careers | **`careers` table on RDS.** Public reads via `GET /api/v1/careers`; CMS writes via authenticated `/api/v1/admin/careers` (list, create, edit, status toggle, permanent delete). Seeded from [api/seeds/careers_seed.sql](../api/seeds/careers_seed.sql). | Same table with audit trail **[planned]** | When audit trail ships |
-| Team | **`team_members` table on RDS.** Public reads via `GET /api/v1/team?roster=<roster>` (grid) and `GET /api/v1/team?roster=<roster>&slug=<x>` (bio); CMS writes via authenticated `/api/v1/admin/team` (separate list pages for Leadership and Senior Investment Professionals). Seeded from [api/seeds/team_members_data.php](../api/seeds/team_members_data.php) via [api/seeds/load_team_members.php](../api/seeds/load_team_members.php). | Same table with headshot upload + audit trail **[planned]** | When media library ships |
+| News & Insights | **`news` table on RDS.** Public reads via `GET /api/v1/news`; CMS writes via authenticated `/api/v1/admin/news` (list, create, edit, status toggle, permanent delete). | Same table with admin image uploads and audit trail **[planned]** | When image upload + audit ship |
+| Careers | **`careers` table on RDS.** Public reads via `GET /api/v1/careers`; CMS writes via authenticated `/api/v1/admin/careers` (list, create, edit, status toggle, permanent delete). | Same table with audit trail **[planned]** | When audit trail ships |
+| Team | **`team_members` table on RDS.** Public reads via `GET /api/v1/team?roster=<roster>` (grid) and `GET /api/v1/team?roster=<roster>&slug=<x>` (bio); CMS writes via authenticated `/api/v1/admin/team` (separate list pages for Leadership and Senior Investment Professionals). | Same table with headshot upload + audit trail **[planned]** | When media library ships |
 | Sectors | Hardcoded in [frontend/src/data/sectors.ts](../frontend/src/data/sectors.ts) | TBD - may stay static | Undecided |
-| Page copy (legal / privacy) | **`site_pages` table on RDS.** Public reads via `GET /api/v1/pages?slug=<x>`; CMS edits via `/api/v1/admin/pages` (edit-only for seeded slugs). Seeded from [api/seeds/site_pages_seed.sql](../api/seeds/site_pages_seed.sql) (source Markdown in [api/seeds/content/](../api/seeds/content/)). | Same table with audit trail **[planned]** | When audit trail ships |
+| Page copy (legal / privacy) | **`site_pages` table on RDS.** Public reads via `GET /api/v1/pages?slug=<x>`; CMS edits via `/api/v1/admin/pages` (edit-only for provisioned slugs). | Same table with audit trail **[planned]** | When audit trail ships |
 
 ---
 
@@ -55,23 +55,9 @@ flowchart LR
 - **Page:** [frontend/src/pages/news-and-insights/](../frontend/src/pages/news-and-insights/) — the three newest posts render as featured cards (via the shared [NewsCard](../frontend/src/pages/news-and-insights/NewsCard.tsx)); the rest fill the "Crayhill in the News" list. The article detail page (`/news-and-insights/:slug`) renders the Markdown body in a two-column layout: the body on the left, plus a sidebar of the two most recent posts (`useNewsList()`, excluding the post being read) reusing the same `NewsCard`.
 - **Homepage teaser:** the homepage "News & Insights" section ([frontend/src/pages/home/NewsInsights.tsx](../frontend/src/pages/home/NewsInsights.tsx)) also consumes `useNewsList()`, taking the three newest posts. It previously held hardcoded placeholder articles; that placeholder set has been removed, so the homepage now reflects the DB like the index page. On error or an empty list it degrades quietly (heading-only, no cards), since the heading links to the full index.
 
-### Seed / provenance flow (one-time, historical)
+### Provenance (historical)
 
-```mermaid
-flowchart LR
-  wpdump["legacy WordPress wp_posts dump (deleted; backed up offline)"]
-  cleaner["scripts/clean-wp-posts.mjs (one-time clean)"]
-  csv["news-posts.csv (deleted; backed up offline)"]
-  seed["api/seeds/news_seed.sql (committed, reproducible)"]
-  table["crayhill.news table"]
-  wpdump --> cleaner --> csv --> seed --> table
-```
-
-1. **Origin:** a raw WordPress `wp_posts` dump (latin1, mojibake, Gutenberg/classic HTML, tracking links). Deleted from the repo once processed; backed up offline.
-2. **Clean (one-time):** [scripts/clean-wp-posts.mjs](../scripts/clean-wp-posts.mjs) repaired encoding, stripped markup, converted bodies to Markdown, and unwrapped tracking links, emitting a `news-posts.csv` (since deleted; backed up offline).
-3. **Committed seed:** [api/seeds/news_seed.sql](../api/seeds/news_seed.sql) is the repo's reproducible source for the table — a single idempotent `INSERT ... ON DUPLICATE KEY UPDATE` keyed on the unique `slug`. Loaded via the `mysql` client (not `migrate.php`, whose naive `;` splitter would shred the Markdown). See `INSTALL.md` → "Database setup".
-
-The DB is now the source of truth for news content; editing happens directly in the table (and eventually via the admin dashboard), not by re-running a cleaner.
+Initial news rows were migrated one-time from a legacy WordPress export (cleaned to Markdown). That pipeline and its committed seed files have been removed; **RDS is the sole source of truth.** Edit via the CMS or directly in the `news` table.
 
 ### `news` table
 
@@ -142,9 +128,9 @@ flowchart LR
 - **Client:** [frontend/src/api/careers.ts](../frontend/src/api/careers.ts) exposes `useCareersList()` over the typed fetch wrapper in [frontend/src/api/client.ts](../frontend/src/api/client.ts). Response types live in [frontend/src/api/types/careers.ts](../frontend/src/api/types/careers.ts) and mirror the PHP contract.
 - **Page:** [frontend/src/pages/careers/](../frontend/src/pages/careers/) — each posting is an accordion row; the title toggles its body open in place (rendered Markdown via `react-markdown` + `remark-gfm`). Per the designer spec, an expanded row turns the title + caret brand blue (`--color-accent`, `#57A0DD`) and rotates the caret. The nav and footer "Careers" links point at `/careers` (previously the dead `/team/careers`).
 
-### Seed / provenance flow (one-time, historical)
+### Provenance (historical)
 
-The postings were scraped one-time from the legacy crayhill.com Careers listing and the individual job detail pages, converted to Markdown, and written to the committed, reproducible seed [api/seeds/careers_seed.sql](../api/seeds/careers_seed.sql) — a single idempotent `INSERT ... ON DUPLICATE KEY UPDATE` keyed on the unique `slug`. Loaded via the `mysql` client (not `migrate.php`, whose naive `;` splitter would shred the Markdown). The DB is now the source of truth; editing happens directly in the seed/table, not by re-scraping. (The Investment Analyst and Associate postings were initially seeded but later removed from both the seed and the live table — only the Data Center Project Development Manager role remains open. Note a seed re-run upserts the listed rows but does not delete rows dropped from the file, so removals are done with an explicit `DELETE`.)
+Initial postings were scraped one-time from the legacy crayhill.com Careers listing and loaded into RDS. Committed seed files have been removed; edit via the CMS or directly in the `careers` table.
 
 ### `careers` table
 
@@ -212,15 +198,9 @@ flowchart LR
 
 Two CMS list pages under `/admin/team/leadership` and `/admin/team/senior-investment-professionals`, each with create/edit forms. Authenticated CRUD via [api/v1/admin/team.php](../api/v1/admin/team.php); frontend hooks in [frontend/src/api/admin-team.ts](../frontend/src/api/admin-team.ts).
 
-### Seed / provenance
+### Provenance (historical)
 
-Initial rows were exported from the former hardcoded roster pages and bio copy into [api/seeds/team_members_data.php](../api/seeds/team_members_data.php). Load via:
-
-```sh
-php api/seeds/load_team_members.php
-```
-
-Idempotent upsert on unique `slug`. The DB is the source of truth after first load; edit via the CMS or the seed file.
+Initial rows were exported one-time from the former hardcoded roster pages and bio copy. Committed seed files have been removed; **RDS is the sole source of truth.** Edit via the CMS at `/admin/team/...`.
 
 ### `team_members` table
 
@@ -279,7 +259,7 @@ curl -s 'http://localhost:8000/v1/team.php?roster=leadership&slug=josh-eaton'
 
 ## Site pages (Legal Notice & Privacy Policy)
 
-Fixed-route marketing/legal pages share one table. Each row is keyed by `slug` (matching the public URL segment). There are no individual CMS create/delete operations — pages are provisioned via migration + seed; operators edit copy in place.
+Fixed-route marketing/legal pages share one table. Each row is keyed by `slug` (matching the public URL segment). There are no individual CMS create/delete operations — pages are provisioned in the database with a fixed slug allowlist; operators edit copy in place.
 
 ```mermaid
 flowchart LR
@@ -299,13 +279,13 @@ flowchart LR
 ```
 
 - **Migration:** [api/migrations/2026_06_24_005_create_site_pages.sql](../api/migrations/2026_06_24_005_create_site_pages.sql)
-- **Seed:** [api/seeds/site_pages_seed.sql](../api/seeds/site_pages_seed.sql) — readable source Markdown in [api/seeds/content/](../api/seeds/content/). Load via `mysql` client after migration `005`.
+- **Content:** rows live in RDS; bootstrap via shared RDS instance, `mysqldump` restore, or manual CMS entry (see `INSTALL.md` → **CMS content**).
 - **Public endpoint:** [api/v1/pages.php](../api/v1/pages.php) — returns published rows only.
 - **Admin endpoint:** [api/v1/admin/pages.php](../api/v1/admin/pages.php) — list + edit; slug allowlist in [api/lib/site_pages.php](../api/lib/site_pages.php).
 - **Public pages:** [frontend/src/components/SitePageView.tsx](../frontend/src/components/SitePageView.tsx) — shared layout; Markdown via [LegalMarkdownBody](../frontend/src/components/LegalMarkdownBody.tsx) (`.legal-prose`, internal links as React Router `Link`).
 - **CMS:** [frontend/src/pages/admin/pages/](../frontend/src/pages/admin/pages/) — index at `/admin/pages`; separate sidebar entries link directly to each editor. Uses [MarkdownEditorWithPreview](../frontend/src/components/MarkdownEditorWithPreview.tsx) with `previewVariant="legal"`.
 
-Allowed slugs (must stay in sync across PHP, seed, and [frontend/src/lib/site-page-slugs.ts](../frontend/src/lib/site-page-slugs.ts)):
+Allowed slugs (must stay in sync across PHP allowlist and [frontend/src/lib/site-page-slugs.ts](../frontend/src/lib/site-page-slugs.ts)):
 
 | Slug | Public route |
 |---|---|
@@ -389,7 +369,7 @@ flowchart LR
 
 ### CMS site pages (live)
 
-- **Pages:** [frontend/src/pages/admin/pages/](../frontend/src/pages/admin/pages/) — edit-only tooling for seeded legal/privacy copy. Sidebar links go directly to each editor; `/admin/pages` lists all provisioned pages.
+- **Pages:** [frontend/src/pages/admin/pages/](../frontend/src/pages/admin/pages/) — edit-only tooling for legal/privacy copy. Sidebar links go directly to each editor; `/admin/pages` lists all provisioned pages.
 - **Client:** [frontend/src/api/admin-site-page.ts](../frontend/src/api/admin-site-page.ts)
 - **Endpoint:** [api/v1/admin/pages.php](../api/v1/admin/pages.php)
 
@@ -397,6 +377,6 @@ flowchart LR
 
 ## Admin dashboard
 
-**Phase 1 (live):** `/admin` sign-in plus CMS tooling for news, careers, legal/privacy page copy, and team rosters (Leadership + Senior Investment Professionals as separate admin pages).
+**Phase 1 (live):** `/admin` sign-in plus CMS tooling for news, careers, legal/privacy page copy, and team rosters (Leadership + Senior Investment Professionals as separate admin pages). All CMS writes pass through `api/lib/sanitize.php` — Markdown may use headings, lists, links, and emphasis only (no HTML or code); text fields strip control characters; URLs and image paths are validated before storage.
 
 **Planned next:** headshot uploads via media library and an audit trail.

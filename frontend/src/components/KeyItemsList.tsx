@@ -10,22 +10,21 @@ import { useInViewOnce } from '@/hooks/useInViewOnce'
  * Variant: 'strategy' (default)
  *   - Used on Strategies pages (ABF Credit Opportunities, Investment
  *     Grade ABF, Origination Platforms).
- *   - Tighter rhythm: `pt-10 pb-module` (40px top, 120px bottom). The
- *     40px top is intentional — these blocks sit either directly
- *     below another paper-dark section (no color change to bridge)
- *     or right after a hard paper-deep → paper-dark transition, and
- *     the designer wants the eyebrow close to the top of the dark
- *     surface in both cases.
+ *   - Module rhythm: `pt-module pb-module` (120px top and bottom). The
+ *     block sits on --color-paper-deep as its own navy module below the
+ *     paper-dark intro section, so it gets standard top padding — not
+ *     the tighter 40px used when this block shared paper-dark with the
+ *     section above.
  *   - Items as <h4> in white.
  *   - Dividers as white-at-20%-opacity rules.
  *
  * Variant: 'sector'
  *   - Used on sector deep-dive pages (Power & Infrastructure, etc).
- *   - Standard module padding: `py-module` (120px top and bottom) —
- *     the designer's explicit per-element annotation on this page.
+ *   - Background: --color-paper-dark (#1B2636) — the inverse of the
+ *     strategy-page Key Asset Types block.
+ *   - Standard module padding: `py-module` (120px top and bottom).
  *   - Items as <h4> in white (same scale as strategy pages).
- *   - Dividers as --color-accent-light (#9AC6EB) — the lightest
- *     swatch in the brand navy→sky-blue gradient.
+ *   - Dividers as --color-accent-light (#9AC6EB).
  *
  * Linking (`linked` prop, default false):
  *   - By default items render as plain headings — NOT links, no hover
@@ -37,7 +36,9 @@ import { useInViewOnce } from '@/hooks/useInViewOnce'
  *     canonical sector page.
  *
  * Both variants:
- *   - <section> on --color-paper-deep (#293A51).
+ *   - Background alternates with the page rhythm. Strategy pages use
+ *     --color-paper-deep (#293A51); sector pages use --color-paper-dark
+ *     (#1B2636) — the inverse of the strategy pattern.
  *   - H5 eyebrow in --color-accent (blue), uppercase + tracking from
  *     the H5 base rule.
  *   - The list is bracketed top and bottom by the same divider rule.
@@ -71,16 +72,19 @@ const ANIM_STAGGER_MS = 110
 const VARIANT_STYLES: Record<
   KeyItemsListVariant,
   {
+    sectionBackground: string
     sectionPadding: string
     /** Border + divide-y classes for the <ul>. */
     rules: string
   }
 > = {
   strategy: {
-    sectionPadding: 'pt-10 pb-module',
+    sectionBackground: 'bg-paper-deep',
+    sectionPadding: 'pt-module pb-module',
     rules: 'divide-y divide-white/20 border-y border-white/20',
   },
   sector: {
+    sectionBackground: 'bg-paper-dark',
     sectionPadding: 'py-module',
     rules:
       'divide-y divide-accent-light border-y border-accent-light',
@@ -118,7 +122,7 @@ export function KeyItemsList({
 
   return (
     <section
-      className={`bg-paper-deep px-6 sm:px-10 ${styles.sectionPadding}`}
+      className={`${styles.sectionBackground} px-6 sm:px-10 ${styles.sectionPadding}`}
     >
       <div className="mx-auto max-w-7xl">
         <h5 className="text-accent">{eyebrow}</h5>

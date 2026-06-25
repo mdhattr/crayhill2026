@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/sanitize.php';
+
 /**
  * Shared site-page helpers used by the public and admin endpoints.
  */
 
-/** Slugs provisioned via migration/seed; not creatable through the CMS. */
+/** Slugs provisioned in the database; not creatable through the CMS. */
 const SITE_PAGE_SLUGS = [
     'legal-notice-and-disclosures',
     'privacy-policy',
@@ -65,28 +67,34 @@ function site_page_validate_write_fields(array $body, bool $requireAll): array
     $has = static fn (string $key): bool => array_key_exists($key, $body);
 
     if ($requireAll || $has('title')) {
-        $title = trim((string) ($body['title'] ?? ''));
-        if ($title === '') {
-            $errors['title'] = 'Title is required.';
-        } elseif (mb_strlen($title) > 512) {
-            $errors['title'] = 'Title must be 512 characters or fewer.';
+        $error = validate_clean_text_field((string) ($body['title'] ?? ''), 'Title', 512, $requireAll);
+        if ($error !== null) {
+            $errors['title'] = $error;
         }
     }
 
     if ($requireAll || $has('meta_description')) {
-        $meta = trim((string) ($body['meta_description'] ?? ''));
-        if ($requireAll && $meta === '') {
-            $errors['meta_description'] = 'Meta description is required.';
-        } elseif ($meta !== '' && mb_strlen($meta) > 512) {
-            $errors['meta_description'] = 'Meta description must be 512 characters or fewer.';
+        $error = validate_clean_text_field(
+            (string) ($body['meta_description'] ?? ''),
+            'Meta description',
+            512,
+            $requireAll,
+        );
+        if ($error !== null) {
+            $errors['meta_description'] = $error;
         }
     }
 
     if ($requireAll || $has('subtitle')) {
         if ($body['subtitle'] !== null) {
-            $subtitle = trim((string) ($body['subtitle'] ?? ''));
-            if ($subtitle !== '' && mb_strlen($subtitle) > 255) {
-                $errors['subtitle'] = 'Subtitle must be 255 characters or fewer.';
+            $error = validate_clean_text_field(
+                (string) ($body['subtitle'] ?? ''),
+                'Subtitle',
+                255,
+                false,
+            );
+            if ($error !== null) {
+                $errors['subtitle'] = $error;
             }
         }
     }
@@ -102,8 +110,9 @@ function site_page_validate_write_fields(array $body, bool $requireAll): array
 
     if ($requireAll || $has('content')) {
         $content = (string) ($body['content'] ?? '');
-        if ($requireAll && trim($content) === '') {
-            $errors['content'] = 'Content is required.';
+        $error = validate_markdown_content($content, $requireAll);
+        if ($error !== null) {
+            $errors['content'] = $error;
         }
     }
 

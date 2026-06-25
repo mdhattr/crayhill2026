@@ -122,21 +122,19 @@ try {
         }
 
         $location = $body['location'] ?? null;
-        $locationValue = ($location === null || trim((string) $location) === '')
-            ? null
-            : trim((string) $location);
+        $locationValue = sanitize_optional_text($location);
 
         $stmt = $pdo->prepare(
             'INSERT INTO careers (title, slug, location, sort_order, status, content)
              VALUES (:title, :slug, :location, :sort_order, :status, :content)'
         );
         $stmt->execute([
-            ':title' => trim((string) $body['title']),
+            ':title' => prepare_stored_text($body['title']),
             ':slug' => $slug,
             ':location' => $locationValue,
             ':sort_order' => $sortOrder,
-            ':status' => trim((string) $body['status']),
-            ':content' => (string) $body['content'],
+            ':status' => prepare_stored_text($body['status']),
+            ':content' => prepare_stored_markdown($body['content']),
         ]);
 
         $newId = (int) $pdo->lastInsertId();
@@ -190,18 +188,15 @@ try {
 
         if (array_key_exists('title', $body)) {
             $updates[] = 'title = :title';
-            $params[':title'] = trim((string) $body['title']);
+            $params[':title'] = prepare_stored_text($body['title']);
         }
         if (array_key_exists('slug', $body)) {
             $updates[] = 'slug = :slug';
             $params[':slug'] = trim((string) $body['slug']);
         }
         if (array_key_exists('location', $body)) {
-            $location = $body['location'];
             $updates[] = 'location = :location';
-            $params[':location'] = ($location === null || trim((string) $location) === '')
-                ? null
-                : trim((string) $location);
+            $params[':location'] = sanitize_optional_text($body['location']);
         }
         if (array_key_exists('sort_order', $body)) {
             $updates[] = 'sort_order = :sort_order';
@@ -213,7 +208,7 @@ try {
         }
         if (array_key_exists('content', $body)) {
             $updates[] = 'content = :content';
-            $params[':content'] = (string) $body['content'];
+            $params[':content'] = prepare_stored_markdown($body['content']);
         }
 
         if ($updates === []) {

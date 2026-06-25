@@ -16,7 +16,7 @@ require_once __DIR__ . '/../../lib/site_pages.php';
  *   GET   /api/v1/admin/pages?slug=<x>  -> single page for editing
  *   PATCH /api/v1/admin/pages           -> update (partial body; `id` required)
  *
- * Pages are seeded via migration — no create or delete through the CMS.
+ * Pages are provisioned in the database with a fixed slug allowlist — no create or delete through the CMS.
  */
 
 cms_require_auth();
@@ -124,18 +124,18 @@ try {
 
     if (array_key_exists('title', $body)) {
         $updates[] = 'title = :title';
-        $params[':title'] = trim((string) $body['title']);
+        $params[':title'] = prepare_stored_text($body['title']);
     }
     if (array_key_exists('subtitle', $body)) {
         $subtitle = $body['subtitle'];
         $updates[] = 'subtitle = :subtitle';
         $params[':subtitle'] = ($subtitle === null || trim((string) $subtitle) === '')
             ? null
-            : trim((string) $subtitle);
+            : prepare_stored_text($subtitle);
     }
     if (array_key_exists('meta_description', $body)) {
         $updates[] = 'meta_description = :meta_description';
-        $params[':meta_description'] = trim((string) $body['meta_description']);
+        $params[':meta_description'] = prepare_stored_text($body['meta_description']);
     }
     if (array_key_exists('status', $body)) {
         $updates[] = 'status = :status';
@@ -143,7 +143,7 @@ try {
     }
     if (array_key_exists('content', $body)) {
         $updates[] = 'content = :content';
-        $params[':content'] = (string) $body['content'];
+        $params[':content'] = prepare_stored_markdown($body['content']);
     }
 
     if ($updates === []) {

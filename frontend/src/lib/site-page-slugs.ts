@@ -1,4 +1,4 @@
-/** Fixed site-page slugs provisioned via migration/seed and editable in the CMS. */
+/** Fixed site-page slugs provisioned in the database and editable in the CMS. */
 export const SITE_PAGE_SLUG = {
   legalNotice: 'legal-notice-and-disclosures',
   privacyPolicy: 'privacy-policy',

@@ -54,12 +54,6 @@ const TOOLBAR_BUTTONS: ToolbarButton[] = [
     face: 'Quote',
   },
   {
-    action: 'code',
-    label: 'Inline code',
-    title: 'Inline code (`code`)',
-    face: 'Code',
-  },
-  {
     action: 'strike',
     label: 'Strikethrough',
     title: 'Strikethrough (~~text~~)',
@@ -70,16 +64,16 @@ const TOOLBAR_BUTTONS: ToolbarButton[] = [
 const PREVIEW_HELP: Record<MarkdownPreviewVariant, string> = {
   news:
     'Select text and use the toolbar to add Markdown, or type syntax directly. ' +
-    'The preview matches the public article page; saved content stays Markdown.',
+    'HTML and code are not allowed. The preview matches the public article page.',
   careers:
     'Select text and use the toolbar to add Markdown, or type syntax directly. ' +
-    'The preview matches the expanded Careers accordion body; saved content stays Markdown.',
+    'HTML and code are not allowed. The preview matches the expanded Careers accordion body.',
   legal:
     'Select text and use the toolbar to add Markdown, or type syntax directly. ' +
-    'The preview matches the public legal page styling; saved content stays Markdown.',
+    'HTML and code are not allowed. The preview matches the public legal page styling.',
   'team-bio':
     'Write one paragraph per block, separated by a blank line. ' +
-    'The preview matches the public bio page column flow; saved content stays Markdown.',
+    'HTML and code are not allowed. The preview matches the public bio page column flow.',
 }
 
 function toolbarButtonClass(isActive = false): string {

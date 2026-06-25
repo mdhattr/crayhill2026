@@ -76,11 +76,8 @@ const ASSET_TYPES: ReadonlyArray<KeyItem> = [
  *      `py-[90px]` designer-specified module padding (an explicit
  *      deviation from the standard 120px rhythm).
  *
- *   3. Key Asset Types — <KeyItemsList variant="sector" /> with the
- *      six sector-specific items defined above. The 'sector'
- *      variant renders items as H3 (vs strategy's H4) and uses
- *      --color-accent-light (#9AC6EB) divider rules, per the
- *      designer's per-element annotations on this page.
+ *   3. Key Asset Types — <KeyItemsList variant="sector" /> on
+ *      --color-paper-dark with accent-light divider rules.
  *
  *   4. Select Transactions — the shared <TransactionsGrid /> block,
  *      fed with the page-local TRANSACTIONS list above. Three-card

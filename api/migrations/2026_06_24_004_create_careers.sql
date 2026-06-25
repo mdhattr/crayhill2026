@@ -1,9 +1,7 @@
 -- Migration: 2026_06_24_004_create_careers
 --
 -- Creates the `careers` table that backs the Careers page content domain
--- (open job postings). Seeded from api/seeds/careers_seed.sql (scraped from
--- the legacy crayhill.com/careers listing + job detail pages, converted to
--- Markdown) and served through GET /api/v1/careers.
+-- (open job postings). Content lives in RDS; served through GET /api/v1/careers.
 --
 -- The rebuilt site has NO individual job-posting pages: the Careers page
 -- renders each posting as a clickable accordion (title -> expand to full
@@ -11,11 +9,11 @@
 --
 -- ID strategy (per .cursor/rules/20-php-api.mdc): integer auto-increment
 -- surrogate key. The unique `slug` is the stable external identifier and the
--- upsert key for the seed loader. `sort_order` controls display order on the
+-- upsert key when importing or deduplicating rows. `sort_order` controls display order on the
 -- page (ascending); ties break on id.
 --
 -- status: 'published' rows appear on the site; 'draft' rows are held back.
--- New rows default to 'draft'; the seed sets the live postings to 'published'.
+-- New rows default to 'draft'; published rows are set via CMS or direct DB update.
 --
 -- Charset / collation: utf8mb4 / utf8mb4_unicode_ci, per the project rule.
 --

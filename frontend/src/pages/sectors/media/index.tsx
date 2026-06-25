@@ -46,10 +46,11 @@ const TRANSACTIONS: ReadonlyArray<Transaction> = [
  *
  * Page composition (top to bottom):
  *
- *   1. Title — <section> on --color-paper-deep (#293A51). Centered H1
- *      "Media" in white. Standard module padding.
+ *   1. Title — <section> on --color-paper-dark (#1B2636). Centered H1
+ *      "Media" in white. `pt-module pb-element` (120/90), matching
+ *      the other sector title banners.
  *
- *   2. Intro — <section> on --color-paper-dark (#1B2636). Two columns
+ *   2. Intro — <section> on --color-paper-deep (#293A51). Two columns
  *      on md+: left H3 description above a smaller hero image pinned
  *      to the column bottom; right large hero image filling the row
  *      height (h-full + object-cover).
@@ -87,7 +88,7 @@ export default function MediaPage() {
     <>
       <PageHead title={mediaMeta.title} description={mediaMeta.description} />
       <main>
-        <section className="bg-paper-deep px-6 py-module sm:px-10">
+        <section className="bg-paper-dark px-6 pt-module pb-element sm:px-10">
           <div className="mx-auto max-w-7xl">
             <h1 className="text-center text-white">Media</h1>
           </div>
@@ -98,7 +99,7 @@ export default function MediaPage() {
          * padding (deviation from the 120px module standard, same
          * convention used on every sector page intro).
          */}
-        <section className="bg-paper-dark px-6 py-[60px] sm:px-10 md:py-[90px]">
+        <section className="bg-paper-deep px-6 py-[60px] sm:px-10 md:py-[90px]">
           <div className="mx-auto max-w-7xl">
             <div
               className={

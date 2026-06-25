@@ -1,5 +1,6 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { SAFE_MARKDOWN_COMPONENTS } from '@/lib/safe-markdown'
 
 type NewsMarkdownBodyProps = {
   /** Markdown source. Renders nothing when empty or whitespace-only. */
@@ -18,7 +19,9 @@ export function NewsMarkdownBody({ content, className = '' }: NewsMarkdownBodyPr
 
   return (
     <div className={`news-prose text-body-1 text-ink ${className}`.trim()}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={SAFE_MARKDOWN_COMPONENTS}>
+        {content}
+      </ReactMarkdown>
     </div>
   )
 }

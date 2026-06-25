@@ -2,8 +2,7 @@
 --
 -- Team roster members for Leadership and Senior Investment Professionals.
 -- Backs public GET /api/v1/team and authenticated /api/v1/admin/team.
--- Seeded from api/seeds/team_members_seed.sql (sourced from the former
--- hardcoded team-bios.ts + roster page card titles).
+-- Content lives in RDS (formerly hardcoded team-bios.ts + roster page card titles).
 --
 -- roster: which public page the member appears on.
 -- card_title: short title on the roster grid card (H5).

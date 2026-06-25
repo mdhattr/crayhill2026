@@ -106,7 +106,7 @@ try {
             ]);
         }
 
-        $author = trim((string) $body['author']);
+        $author = prepare_stored_text($body['author']);
         if ($author === '') {
             $author = 'Crayhill Capital Management';
         }
@@ -114,20 +114,20 @@ try {
         $image = $body['image'] ?? null;
         $imageValue = ($image === null || trim((string) $image) === '')
             ? null
-            : trim((string) $image);
+            : prepare_stored_text($image);
 
         $stmt = $pdo->prepare(
             'INSERT INTO news (title, author, slug, published_date, image, status, content)
              VALUES (:title, :author, :slug, :published_date, :image, :status, :content)'
         );
         $stmt->execute([
-            ':title' => trim((string) $body['title']),
+            ':title' => prepare_stored_text($body['title']),
             ':author' => $author,
             ':slug' => $slug,
-            ':published_date' => trim((string) $body['date']),
+            ':published_date' => prepare_stored_text($body['date']),
             ':image' => $imageValue,
-            ':status' => trim((string) $body['status']),
-            ':content' => (string) $body['content'],
+            ':status' => prepare_stored_text($body['status']),
+            ':content' => prepare_stored_markdown($body['content']),
         ]);
 
         $newId = (int) $pdo->lastInsertId();
@@ -173,10 +173,10 @@ try {
 
         if (array_key_exists('title', $body)) {
             $updates[] = 'title = :title';
-            $params[':title'] = trim((string) $body['title']);
+            $params[':title'] = prepare_stored_text($body['title']);
         }
         if (array_key_exists('author', $body)) {
-            $author = trim((string) $body['author']);
+            $author = prepare_stored_text($body['author']);
             $updates[] = 'author = :author';
             $params[':author'] = $author !== '' ? $author : 'Crayhill Capital Management';
         }
@@ -186,7 +186,7 @@ try {
         }
         if (array_key_exists('date', $body)) {
             $updates[] = 'published_date = :published_date';
-            $params[':published_date'] = trim((string) $body['date']);
+            $params[':published_date'] = prepare_stored_text($body['date']);
         }
         if (array_key_exists('status', $body)) {
             $updates[] = 'status = :status';
@@ -197,11 +197,11 @@ try {
             $updates[] = 'image = :image';
             $params[':image'] = ($image === null || trim((string) $image) === '')
                 ? null
-                : trim((string) $image);
+                : prepare_stored_text($image);
         }
         if (array_key_exists('content', $body)) {
             $updates[] = 'content = :content';
-            $params[':content'] = (string) $body['content'];
+            $params[':content'] = prepare_stored_markdown($body['content']);
         }
 
         if ($updates === []) {
