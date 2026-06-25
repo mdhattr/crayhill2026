@@ -1,7 +1,6 @@
 import { NavLink, useParams } from 'react-router-dom'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { useNewsArticle, useNewsList } from '@/api/news'
+import { NewsMarkdownBody } from '@/components/NewsMarkdownBody'
 import { PageHead } from '@/components/PageHead'
 import { CtaChevron } from '@/components/CtaChevron'
 import { NewsCard } from '@/pages/news-and-insights/NewsCard'
@@ -109,11 +108,7 @@ export default function NewsArticlePage() {
                     {formatDate(article.date)}
                   </p>
 
-                  <div className="news-prose mt-10 text-body-1 text-ink">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {article.content}
-                    </ReactMarkdown>
-                  </div>
+                  <NewsMarkdownBody content={article.content} className="mt-10" />
 
                   {backLink}
                 </article>

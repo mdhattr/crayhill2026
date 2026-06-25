@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../lib/env.php';
 require_once __DIR__ . '/../lib/response.php';
 require_once __DIR__ . '/../lib/db.php';
+require_once __DIR__ . '/../lib/news.php';
 
 /**
  * GET /api/v1/news            -> list of published posts, newest first
@@ -32,68 +33,6 @@ require_once __DIR__ . '/../lib/db.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
     respond_error('METHOD_NOT_ALLOWED', 'Only GET is supported.', 405);
-}
-
-/**
- * Reduce Markdown to a plain-text summary suitable for a list card.
- * Not a full Markdown parser — just enough to strip the syntax that would
- * otherwise leak into an excerpt (links, emphasis, headings, list markers).
- */
-function news_excerpt(string $markdown, int $maxChars = 220): string
-{
-    $text = $markdown;
-    // Images: ![alt](url) -> drop entirely.
-    $text = preg_replace('/!\[[^\]]*\]\([^)]*\)/', '', $text) ?? $text;
-    // Links: [text](url) -> text.
-    $text = preg_replace('/\[([^\]]*)\]\([^)]*\)/', '$1', $text) ?? $text;
-    // Bold / italic / inline-code markers.
-    $text = preg_replace('/(\*\*|\*|__|_|`)/', '', $text) ?? $text;
-    // Leading block markers per line: headings, blockquotes, list bullets.
-    $text = preg_replace('/^\s{0,3}(#{1,6}\s+|>\s?|[-*+]\s+|\d+\.\s+)/m', '', $text) ?? $text;
-    // Collapse all runs of whitespace (including the paragraph newlines) to
-    // single spaces so the excerpt is one continuous line.
-    $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
-    $text = trim($text);
-
-    if (mb_strlen($text) <= $maxChars) {
-        return $text;
-    }
-
-    $cut = mb_substr($text, 0, $maxChars);
-    // Back up to the last word boundary so we don't slice a word in half.
-    $lastSpace = mb_strrpos($cut, ' ');
-    if ($lastSpace !== false && $lastSpace > 0) {
-        $cut = mb_substr($cut, 0, $lastSpace);
-    }
-    return rtrim($cut, " \t\n\r\0\x0B.,;:") . '…';
-}
-
-/** Shape a raw DB row into the public list-item contract. */
-function news_list_item(array $row): array
-{
-    return [
-        'id' => (int) $row['id'],
-        'slug' => (string) $row['slug'],
-        'title' => (string) $row['title'],
-        'author' => (string) $row['author'],
-        'date' => (string) $row['published_date'],
-        'image' => $row['image'] !== null ? (string) $row['image'] : null,
-        'excerpt' => news_excerpt((string) $row['content']),
-    ];
-}
-
-/** Shape a raw DB row into the public detail contract (full content). */
-function news_detail(array $row): array
-{
-    return [
-        'id' => (int) $row['id'],
-        'slug' => (string) $row['slug'],
-        'title' => (string) $row['title'],
-        'author' => (string) $row['author'],
-        'date' => (string) $row['published_date'],
-        'image' => $row['image'] !== null ? (string) $row['image'] : null,
-        'content' => (string) $row['content'],
-    ];
 }
 
 $slug = isset($_GET['slug']) ? trim((string) $_GET['slug']) : '';

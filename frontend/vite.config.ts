@@ -28,7 +28,16 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/v1\/([^/?]+)/, '/v1/$1.php'),
+        rewrite: (path) => {
+          const q = path.indexOf('?')
+          const pathname = q === -1 ? path : path.slice(0, q)
+          const search = q === -1 ? '' : path.slice(q)
+          const match = pathname.match(/^\/api\/v1\/(.+)$/)
+          if (match) {
+            return `/v1/${match[1]}.php${search}`
+          }
+          return path
+        },
       },
     },
   },

@@ -2,7 +2,7 @@
 
 How content moves through the Crayhill rebrand. This is a living document: it grows as content domains migrate from hardcoded files toward the database (and eventually an admin dashboard). See `.cursor/rules/50-living-docs.mdc` for the rules that keep it honest.
 
-> **Status (current):** The site is mostly static, with two domains now fully database-backed end to end: **News & Insights** and **Careers**. The cleaned legacy WordPress posts live in a `news` table on RDS (served via `GET /api/v1/news`), and the open job postings live in a `careers` table (served via `GET /api/v1/careers`). These are the content domains that have completed the hardcoded → DB-driven migration (the "headline event" in `50-living-docs.mdc`).
+> **Status (current):** **News & Insights**, **Careers**, and **Legal / Privacy page copy** are database-backed end to end. Posts live in `news` (`GET /api/v1/news`), job postings in `careers` (`GET /api/v1/careers`), and fixed legal pages in `site_pages` (`GET /api/v1/pages?slug=<x>`). All three are editable via the CMS at `/admin`.
 
 ---
 
@@ -25,11 +25,11 @@ Boundaries (from `.cursor/rules/00-project.mdc`): the SPA talks to the backend o
 
 | Domain | Current source | Target source | Migration trigger |
 |---|---|---|---|
-| News & Insights | **`news` table on RDS, served via `GET /api/v1/news`** and consumed by the React app through the typed API client. Seeded from [api/seeds/news_seed.sql](../api/seeds/news_seed.sql). | Admin-dashboard-managed `news` table (same endpoint, editable content + image uploads) **[planned]** | When the admin dashboard ships |
-| Careers | **`careers` table on RDS, served via `GET /api/v1/careers`** and consumed by the React app through the typed API client. Seeded from [api/seeds/careers_seed.sql](../api/seeds/careers_seed.sql). | Admin-dashboard-managed `careers` table (same endpoint, editable postings, flip `status` to open/close a role) **[planned]** | When the admin dashboard ships |
+| News & Insights | **`news` table on RDS.** Public reads via `GET /api/v1/news`; CMS writes via authenticated `/api/v1/admin/news` (list, create, edit, status toggle, permanent delete). Seeded from [api/seeds/news_seed.sql](../api/seeds/news_seed.sql). | Same table with admin image uploads and audit trail **[planned]** | When image upload + audit ship |
+| Careers | **`careers` table on RDS.** Public reads via `GET /api/v1/careers`; CMS writes via authenticated `/api/v1/admin/careers` (list, create, edit, status toggle, permanent delete). Seeded from [api/seeds/careers_seed.sql](../api/seeds/careers_seed.sql). | Same table with audit trail **[planned]** | When audit trail ships |
 | Team | Hardcoded in [frontend/src/data/team-bios.ts](../frontend/src/data/team-bios.ts) | `GET /api/v1/team` backed by a `team` table **[planned]** | When the admin dashboard ships |
 | Sectors | Hardcoded in [frontend/src/data/sectors.ts](../frontend/src/data/sectors.ts) | TBD - may stay static | Undecided |
-| Page copy | Inline in page components under `frontend/src/pages/` | TBD | Undecided |
+| Page copy (legal / privacy) | **`site_pages` table on RDS.** Public reads via `GET /api/v1/pages?slug=<x>`; CMS edits via `/api/v1/admin/pages` (edit-only for seeded slugs). Seeded from [api/seeds/site_pages_seed.sql](../api/seeds/site_pages_seed.sql) (source Markdown in [api/seeds/content/](../api/seeds/content/)). | Same table with audit trail **[planned]** | When audit trail ships |
 
 ---
 
@@ -185,6 +185,43 @@ curl -s http://localhost:8000/v1/careers.php
 
 ---
 
+## Site pages (Legal Notice & Privacy Policy)
+
+Fixed-route marketing/legal pages share one table. Each row is keyed by `slug` (matching the public URL segment). There are no individual CMS create/delete operations — pages are provisioned via migration + seed; operators edit copy in place.
+
+```mermaid
+flowchart LR
+  public["/legal-notice-and-disclosures, /privacy-policy"]
+  client["frontend/src/api/site-page.ts"]
+  endpoint["GET /api/v1/pages?slug=<x>"]
+  table["crayhill.site_pages"]
+  admin["/admin/pages/:slug/edit"]
+  adminClient["frontend/src/api/admin-site-page.ts"]
+  adminApi["PATCH /api/v1/admin/pages"]
+  public --> client
+  client --> endpoint
+  endpoint --> table
+  admin --> adminClient
+  adminClient --> adminApi
+  adminApi --> table
+```
+
+- **Migration:** [api/migrations/2026_06_24_005_create_site_pages.sql](../api/migrations/2026_06_24_005_create_site_pages.sql)
+- **Seed:** [api/seeds/site_pages_seed.sql](../api/seeds/site_pages_seed.sql) — readable source Markdown in [api/seeds/content/](../api/seeds/content/). Load via `mysql` client after migration `005`.
+- **Public endpoint:** [api/v1/pages.php](../api/v1/pages.php) — returns published rows only.
+- **Admin endpoint:** [api/v1/admin/pages.php](../api/v1/admin/pages.php) — list + edit; slug allowlist in [api/lib/site_pages.php](../api/lib/site_pages.php).
+- **Public pages:** [frontend/src/components/SitePageView.tsx](../frontend/src/components/SitePageView.tsx) — shared layout; Markdown via [LegalMarkdownBody](../frontend/src/components/LegalMarkdownBody.tsx) (`.legal-prose`, internal links as React Router `Link`).
+- **CMS:** [frontend/src/pages/admin/pages/](../frontend/src/pages/admin/pages/) — index at `/admin/pages`; separate sidebar entries link directly to each editor. Uses [MarkdownEditorWithPreview](../frontend/src/components/MarkdownEditorWithPreview.tsx) with `previewVariant="legal"`.
+
+Allowed slugs (must stay in sync across PHP, seed, and [frontend/src/lib/site-page-slugs.ts](../frontend/src/lib/site-page-slugs.ts)):
+
+| Slug | Public route |
+|---|---|
+| `legal-notice-and-disclosures` | `/legal-notice-and-disclosures` |
+| `privacy-policy` | `/privacy-policy` |
+
+---
+
 ## Image and asset flow
 
 Brand assets are served statically today: files in `assets/` at the repo root are copied verbatim into the build by Vite's `publicDir` and referenced by root-relative URL (`/images/...`). See `INSTALL.md` -> "Static assets".
@@ -195,10 +232,79 @@ For news, the `news.image` column holds such a root-relative path (e.g. `/images
 
 ## Forms / writes
 
-*(None yet.)* No write endpoints exist. The contact/subscribe forms described in `.cursor/rules/20-php-api.mdc` are not built.
+### CMS admin sign-in (phase 1 — live)
+
+```mermaid
+flowchart LR
+  page["/admin (pages/admin/)"]
+  client["frontend/src/api/admin.ts"]
+  login["POST /api/v1/admin/login"]
+  secrets[".config/secrets.env CMS_USERNAME / CMS_PASS"]
+  session["PHP session cookie crayhill_cms"]
+  page -->|"username + password"| client
+  client --> login
+  login -->|"hash_equals"| secrets
+  login --> session
+  client -->|"GET /admin/session"| session
+```
+
+- **Page:** [frontend/src/pages/admin/](../frontend/src/pages/admin/) — outside the public `RootLayout` (no marketing nav/footer). Renders a sign-in form until `GET /api/v1/admin/session` reports `authenticated: true`.
+- **Credentials:** `CMS_USERNAME` and `CMS_PASS` in `.config/secrets.env` (see `.config/secrets.env.example`). Not stored in the database in phase 1.
+- **Endpoints:** [api/v1/admin/login.php](../api/v1/admin/login.php), [session.php](../api/v1/admin/session.php), [logout.php](../api/v1/admin/logout.php). Session helpers live in [api/lib/session.php](../api/lib/session.php).
+- **Client:** [frontend/src/api/admin.ts](../frontend/src/api/admin.ts) — `useAdminSession`, `useAdminLogin`, `useAdminLogout`. All API calls send `credentials: 'include'` so the HttpOnly cookie round-trips.
+
+No public write endpoints exist yet. Contact/subscribe forms described in `.cursor/rules/20-php-api.mdc` are not built.
+
+### CMS news management (live)
+
+```mermaid
+flowchart LR
+  list["/admin/news"]
+  edit["/admin/news/new or /admin/news/:id/edit"]
+  client["frontend/src/api/admin-news.ts"]
+  api["/api/v1/admin/news"]
+  table["crayhill.news"]
+  list --> client
+  edit --> client
+  client -->|"session cookie"| api
+  api --> table
+```
+
+- **Pages:** [frontend/src/pages/admin/news/](../frontend/src/pages/admin/news/) — list table with inline status changes, two-step permanent delete, and create/edit forms.
+- **Client:** [frontend/src/api/admin-news.ts](../frontend/src/api/admin-news.ts) — `useAdminNewsList`, `useAdminNewsArticle`, create/update/delete mutations. Types in [frontend/src/api/types/admin-news.ts](../frontend/src/api/types/admin-news.ts).
+- **Endpoint:** [api/v1/admin/news.php](../api/v1/admin/news.php) — authenticated CRUD guarded by `cms_require_auth()`. Returns drafts and published posts; deletes are hard deletes (row removed from `news`).
+- **Shared helpers:** [api/lib/news.php](../api/lib/news.php) — excerpt generation and response shaping used by both the public and admin endpoints.
+
+### CMS careers management (live)
+
+```mermaid
+flowchart LR
+  list["/admin/careers"]
+  edit["/admin/careers/new or /admin/careers/:id/edit"]
+  client["frontend/src/api/admin-careers.ts"]
+  api["/api/v1/admin/careers"]
+  table["crayhill.careers"]
+  list --> client
+  edit --> client
+  client -->|"session cookie"| api
+  api --> table
+```
+
+- **Pages:** [frontend/src/pages/admin/careers/](../frontend/src/pages/admin/careers/) — list table with inline status changes, two-step permanent delete, and create/edit forms. Uses the shared [MarkdownEditorWithPreview](../frontend/src/components/MarkdownEditorWithPreview.tsx) with `previewVariant="careers"`.
+- **Client:** [frontend/src/api/admin-careers.ts](../frontend/src/api/admin-careers.ts) — `useAdminCareersList`, `useAdminCareersPosting`, create/update/delete mutations. Types in [frontend/src/api/types/admin-careers.ts](../frontend/src/api/types/admin-careers.ts).
+- **Endpoint:** [api/v1/admin/careers.php](../api/v1/admin/careers.php) — authenticated CRUD guarded by `cms_require_auth()`. Ordered by `sort_order`; deletes are hard deletes.
+- **Shared helpers:** [api/lib/careers.php](../api/lib/careers.php) — response shaping and validation used by both the public and admin endpoints.
+
+### CMS site pages (live)
+
+- **Pages:** [frontend/src/pages/admin/pages/](../frontend/src/pages/admin/pages/) — edit-only tooling for seeded legal/privacy copy. Sidebar links go directly to each editor; `/admin/pages` lists all provisioned pages.
+- **Client:** [frontend/src/api/admin-site-page.ts](../frontend/src/api/admin-site-page.ts)
+- **Endpoint:** [api/v1/admin/pages.php](../api/v1/admin/pages.php)
 
 ---
 
-## Admin dashboard **[planned]**
+## Admin dashboard
 
-Not started. The intended purpose is letting non-developers edit news, swap images, and flip `status` without a code commit. Auth, content lists, edit screens, and an audit trail will be documented here as each phase lands.
+**Phase 1 (live):** `/admin` sign-in plus CMS tooling for news, careers, and legal/privacy page copy.
+
+**Planned next:** image uploads and an audit trail.

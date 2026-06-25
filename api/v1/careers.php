@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../lib/env.php';
 require_once __DIR__ . '/../lib/response.php';
 require_once __DIR__ . '/../lib/db.php';
+require_once __DIR__ . '/../lib/careers.php';
 
 /**
  * GET /api/v1/careers  -> list of published job postings, in display order.
@@ -28,18 +29,6 @@ require_once __DIR__ . '/../lib/db.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
     respond_error('METHOD_NOT_ALLOWED', 'Only GET is supported.', 405);
-}
-
-/** Shape a raw DB row into the public posting contract. */
-function careers_item(array $row): array
-{
-    return [
-        'id' => (int) $row['id'],
-        'slug' => (string) $row['slug'],
-        'title' => (string) $row['title'],
-        'location' => $row['location'] !== null ? (string) $row['location'] : null,
-        'content' => (string) $row['content'],
-    ];
 }
 
 try {

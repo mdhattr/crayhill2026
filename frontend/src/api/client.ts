@@ -50,9 +50,15 @@ export class ApiError extends Error {
 
 type QueryParams = Record<string, string | number | undefined>
 
-export async function apiFetch<T>(
+type ApiRequestInit = {
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
+  body?: unknown
+}
+
+async function apiRequest<T>(
   path: string,
   params?: QueryParams,
+  init: ApiRequestInit = {},
 ): Promise<{ data: T; meta: ApiEnvelope<T>['meta'] }> {
   const url = new URL(`${API_BASE_URL}${path}`, window.location.origin)
   if (params) {
@@ -63,9 +69,23 @@ export async function apiFetch<T>(
     }
   }
 
+  const method = init.method ?? 'GET'
+  const headers: Record<string, string> = { Accept: 'application/json' }
+  const fetchInit: RequestInit = {
+    method,
+    headers,
+    // CMS session cookie (and any future cookie-auth endpoints).
+    credentials: 'include',
+  }
+
+  if (init.body !== undefined) {
+    headers['Content-Type'] = 'application/json'
+    fetchInit.body = JSON.stringify(init.body)
+  }
+
   let res: Response
   try {
-    res = await fetch(url, { headers: { Accept: 'application/json' } })
+    res = await fetch(url, fetchInit)
   } catch (cause) {
     throw new ApiError(
       'Network request failed. Check your connection and try again.',
@@ -93,4 +113,32 @@ export async function apiFetch<T>(
   }
 
   return { data: body.data as T, meta: body.meta }
+}
+
+export async function apiFetch<T>(
+  path: string,
+  params?: QueryParams,
+): Promise<{ data: T; meta: ApiEnvelope<T>['meta'] }> {
+  return apiRequest<T>(path, params)
+}
+
+export async function apiPost<T>(
+  path: string,
+  body: unknown,
+): Promise<{ data: T; meta: ApiEnvelope<T>['meta'] }> {
+  return apiRequest<T>(path, undefined, { method: 'POST', body })
+}
+
+export async function apiPatch<T>(
+  path: string,
+  body: unknown,
+): Promise<{ data: T; meta: ApiEnvelope<T>['meta'] }> {
+  return apiRequest<T>(path, undefined, { method: 'PATCH', body })
+}
+
+export async function apiDelete<T>(
+  path: string,
+  params?: QueryParams,
+): Promise<{ data: T; meta: ApiEnvelope<T>['meta'] }> {
+  return apiRequest<T>(path, params, { method: 'DELETE' })
 }

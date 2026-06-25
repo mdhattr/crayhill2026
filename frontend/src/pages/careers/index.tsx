@@ -1,8 +1,7 @@
 import { useId, useState } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { useCareersList } from '@/api/careers'
 import type { CareerPosting } from '@/api/types/careers'
+import { CareersMarkdownBody } from '@/components/CareersMarkdownBody'
 import { PageHead } from '@/components/PageHead'
 import { careersMeta } from '@/pages/careers/meta'
 
@@ -75,10 +74,8 @@ function PostingRow({ posting }: { posting: CareerPosting }) {
       </h4>
 
       {open && (
-        <div id={panelId} className="careers-prose pb-10 text-body-1 text-ink">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {posting.content}
-          </ReactMarkdown>
+        <div id={panelId} className="pb-10">
+          <CareersMarkdownBody content={posting.content} />
         </div>
       )}
     </li>

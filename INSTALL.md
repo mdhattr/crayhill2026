@@ -406,15 +406,27 @@ api/
 │   ├── env.php                  # single env loader; reads .config/secrets.env
 │   ├── response.php             # respond_ok / respond_error / respond_no_content
 │   ├── db.php                   # PDO factory, utf8mb4, TLS-only, prepared statements
-│   └── migrate.php              # admin-credential DDL runner
+│   ├── migrate.php              # admin-credential DDL runner
+│   ├── session.php              # CMS PHP session cookie helpers
+│   ├── auth.php                 # CMS credential check + auth guard
+│   └── request.php              # JSON body reader for POST endpoints
 ├── migrations/                  # numbered, dated schema migrations
 ├── seeds/
 │   ├── news_seed.sql            # committed reproducible seed for the news table
-│   └── careers_seed.sql         # committed reproducible seed for the careers table
+│   ├── careers_seed.sql         # committed reproducible seed for the careers table
+│   └── site_pages_seed.sql      # legal notice + privacy policy copy
 └── v1/
     ├── health.php               # GET /api/v1/health — smoke check
     ├── news.php                 # GET /api/v1/news (list) + ?slug=<x> (detail)
-    └── careers.php              # GET /api/v1/careers (list, full body inline)
+    ├── pages.php                # GET /api/v1/pages?slug=<x> (static page)
+    ├── careers.php              # GET /api/v1/careers (list, full body inline)
+    └── admin/
+        ├── login.php            # POST /api/v1/admin/login
+        ├── session.php          # GET /api/v1/admin/session
+        ├── logout.php           # POST /api/v1/admin/logout
+        ├── news.php             # GET/POST/PATCH/DELETE /api/v1/admin/news
+        ├── careers.php          # GET/POST/PATCH/DELETE /api/v1/admin/careers
+        └── pages.php            # GET/PATCH /api/v1/admin/pages
 ```
 
 ### Endpoints
@@ -425,6 +437,23 @@ api/
 | `GET /api/v1/news` | `api/v1/news.php` | Published posts, newest first: `{ id, slug, title, author, date, image, excerpt }[]` with `meta.count`. |
 | `GET /api/v1/news?slug=<x>` | `api/v1/news.php` | One published post with full Markdown `content`; `404 NOT_FOUND` if missing/draft. |
 | `GET /api/v1/careers` | `api/v1/careers.php` | Published job postings, in `sort_order`: `{ id, slug, title, location, content }[]` (full Markdown body inline) with `meta.count`. No detail route — the Careers page renders accordions. |
+| `GET /api/v1/pages?slug=<x>` | `api/v1/pages.php` | One published static page: `{ slug, title, subtitle, meta_description, content }`. Used for Legal Notice and Privacy Policy. |
+| `POST /api/v1/admin/login` | `api/v1/admin/login.php` | Body `{ username, password }`. Validates against `CMS_USERNAME` / `CMS_PASS` in `secrets.env`. Sets HttpOnly session cookie on success. |
+| `GET /api/v1/admin/session` | `api/v1/admin/session.php` | Current CMS session: `{ authenticated, username }`. |
+| `POST /api/v1/admin/logout` | `api/v1/admin/logout.php` | Destroys CMS session; returns `{ authenticated: false, username: null }`. |
+| `GET /api/v1/admin/news` | `api/v1/admin/news.php` | All non-deleted posts (draft + published), newest first: `{ id, slug, title, author, date, image, status, updated_at }[]` with `meta.count`. Requires CMS session. |
+| `GET /api/v1/admin/news?id=<id>` | `api/v1/admin/news.php` | Single post for editing, including Markdown `content` and `status`. |
+| `POST /api/v1/admin/news` | `api/v1/admin/news.php` | Create a post. Body `{ title, slug, author?, date, status, image?, content }`. Returns the created row (`201`). |
+| `PATCH /api/v1/admin/news` | `api/v1/admin/news.php` | Update a post. Body must include `id`; other fields are partial. Used for full saves and inline status changes from the list. |
+| `DELETE /api/v1/admin/news?id=<id>` | `api/v1/admin/news.php` | Permanently deletes a post (`{ deleted: true, id }`). |
+| `GET /api/v1/admin/careers` | `api/v1/admin/careers.php` | All non-deleted postings (draft + published), in `sort_order`: `{ id, slug, title, location, sort_order, status, updated_at }[]` with `meta.count`. Requires CMS session. |
+| `GET /api/v1/admin/careers?id=<id>` | `api/v1/admin/careers.php` | Single posting for editing, including Markdown `content`. |
+| `POST /api/v1/admin/careers` | `api/v1/admin/careers.php` | Create a posting. Body `{ title, slug, location?, sort_order, status, content }`. Returns the created row (`201`). |
+| `PATCH /api/v1/admin/careers` | `api/v1/admin/careers.php` | Update a posting. Body must include `id`; other fields are partial. |
+| `DELETE /api/v1/admin/careers?id=<id>` | `api/v1/admin/careers.php` | Permanently deletes a posting (`{ deleted: true, id }`). |
+| `GET /api/v1/admin/pages` | `api/v1/admin/pages.php` | All provisioned site pages: `{ id, slug, title, subtitle, status, updated_at }[]`. Requires CMS session. |
+| `GET /api/v1/admin/pages?slug=<slug>` | `api/v1/admin/pages.php` | Single page for editing, including Markdown `content` and `meta_description`. |
+| `PATCH /api/v1/admin/pages` | `api/v1/admin/pages.php` | Update a page. Body must include `id`; other fields are partial. No create/delete — pages are seeded. |
 
 Full response shapes and curl examples live in `docs/data-flow.md` → "News & Insights" and "Careers".
 
@@ -474,6 +503,8 @@ Single source of truth: **`.config/secrets.env`** at the repo root. Format is `K
 | `DB_ADMIN_USER`      | Migrations only  | Yes  | RDS admin user (e.g. `admin`). **Never** read by runtime code paths.                   |
 | `DB_ADMIN_PASSWORD`  | Migrations only  | Yes  | RDS admin password. In production, prefer to inject via the deploy environment.        |
 | `ALLOWED_ORIGINS`    | API              | No   | Comma-separated list of origins allowed by CORS. Local dev: `http://localhost:5173`.    |
+| `CMS_USERNAME`       | API (CMS login)  | Yes  | Operator username for `/admin` sign-in (phase 1; checked by `POST /api/v1/admin/login`). |
+| `CMS_PASS`           | API (CMS login)  | Yes  | Operator password for `/admin` sign-in. Must match the value in `secrets.env` on each environment. |
 
 ### Frontend public variables (`frontend/.env`)
 
@@ -543,7 +574,7 @@ There is currently **no tracking table** for "which migrations have run." Filena
    php api/lib/migrate.php 2026_04_28_002_create_app_user.sql
    ```
 6. Run all subsequent migrations in filename order (e.g. `php api/lib/migrate.php 2026_06_24_003_create_news.sql`, then `php api/lib/migrate.php 2026_06_24_004_create_careers.sql`).
-7. Seed any content domains that ship with data — currently News & Insights and Careers (see "Seed data" below): load `api/seeds/news_seed.sql` and `api/seeds/careers_seed.sql` via the `mysql` client.
+7. Seed any content domains that ship with data — News & Insights, Careers, and site pages (see "Seed data" below): load `api/seeds/news_seed.sql`, `api/seeds/careers_seed.sql`, and `api/seeds/site_pages_seed.sql` via the `mysql` client.
 8. Verify with the health endpoint — `database.selected_schema` should report `"crayhill"` and a separate `CURRENT_USER()` query should return `crayhill_app@%` — then `curl http://127.0.0.1:8000/v1/news.php` and `curl http://127.0.0.1:8000/v1/careers.php` should return the seeded rows.
 
 #### Rotating the app user password
@@ -581,6 +612,16 @@ mysql --host="$DB_HOST" --port="${DB_PORT:-3306}" \
       --user="$DB_USER" --password \
       --ssl-ca=api/certs/aws-rds-ca-bundle.pem \
       crayhill < api/seeds/careers_seed.sql
+```
+
+**Site pages** (Legal Notice & Disclosures, Privacy Policy) are seeded as `api/seeds/site_pages_seed.sql` into the `site_pages` table — migration `005`. Readable Markdown sources live in `api/seeds/content/*.md`. Load the same way:
+
+```sh
+# from the repo root, after migration 005 has run.
+mysql --host="$DB_HOST" --port="${DB_PORT:-3306}" \
+      --user="$DB_USER" --password \
+      --ssl-ca=api/certs/aws-rds-ca-bundle.pem \
+      crayhill < api/seeds/site_pages_seed.sql
 ```
 
 > **Why a `mysql`-loaded seed and not a `*_seed_*.sql` migration through `api/lib/migrate.php`:** the migration runner splits files naively on `;`, and the Markdown post content is full of semicolons — raw `INSERT` SQL would break apart mid-statement. The real `mysql` client parses string literals correctly, so the content survives intact. Small, semicolon-free reference data can still use a numbered `*_seed_*.sql` migration via the runner.

@@ -48,6 +48,14 @@ const LegalNoticeAndDisclosuresPage = lazy(
   () => import('@/pages/legal-notice-and-disclosures'),
 )
 const PrivacyPolicyPage = lazy(() => import('@/pages/privacy-policy'))
+const AdminPage = lazy(() => import('@/pages/admin'))
+const AdminLayout = lazy(() => import('@/pages/admin/AdminLayout'))
+const AdminNewsPage = lazy(() => import('@/pages/admin/news'))
+const AdminNewsEditPage = lazy(() => import('@/pages/admin/news/edit'))
+const AdminCareersPage = lazy(() => import('@/pages/admin/careers'))
+const AdminCareersEditPage = lazy(() => import('@/pages/admin/careers/edit'))
+const AdminPagesIndex = lazy(() => import('@/pages/admin/pages'))
+const AdminSitePageEditPage = lazy(() => import('@/pages/admin/pages/edit'))
 
 /**
  * Suspense fallback for lazy-loaded pages. Intentionally invisible — a brief
@@ -63,6 +71,24 @@ function lazyRoute(element: React.ReactNode) {
 }
 
 const routes: RouteObject[] = [
+  {
+    path: '/admin',
+    element: lazyRoute(<AdminLayout />),
+    children: [
+      { index: true, element: lazyRoute(<AdminPage />) },
+      { path: 'news', element: lazyRoute(<AdminNewsPage />) },
+      { path: 'news/new', element: lazyRoute(<AdminNewsEditPage />) },
+      { path: 'news/:id/edit', element: lazyRoute(<AdminNewsEditPage />) },
+      { path: 'careers', element: lazyRoute(<AdminCareersPage />) },
+      { path: 'careers/new', element: lazyRoute(<AdminCareersEditPage />) },
+      { path: 'careers/:id/edit', element: lazyRoute(<AdminCareersEditPage />) },
+      { path: 'pages', element: lazyRoute(<AdminPagesIndex />) },
+      {
+        path: 'pages/:slug/edit',
+        element: lazyRoute(<AdminSitePageEditPage />),
+      },
+    ],
+  },
   {
     element: <RootLayout />,
     children: [
