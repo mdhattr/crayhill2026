@@ -53,6 +53,9 @@ export function reorderById<T extends { id: number }>(
 
   const reordered = [...items]
   const [moved] = reordered.splice(fromIndex, 1)
+  if (moved === undefined) {
+    return [...items]
+  }
   reordered.splice(toIndex, 0, moved)
 
   return reordered

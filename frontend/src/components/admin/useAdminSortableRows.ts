@@ -29,10 +29,10 @@ export function useAdminSortableRows<T extends SortableRow>({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (items) {
+    if (items && !isSaving) {
       setRows(sortByDisplayOrder(items))
     }
-  }, [items])
+  }, [items, isSaving])
 
   function handleDragStart(id: number) {
     setDraggingId(id)

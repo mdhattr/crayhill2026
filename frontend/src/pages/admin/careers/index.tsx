@@ -126,14 +126,12 @@ export default function AdminCareersPage() {
 
   const persistSortOrder = useCallback(
     async (updates: { id: number; sort_order: number }[]) => {
-      await Promise.all(
-        updates.map((update) =>
-          updatePosting.mutateAsync({
-            id: update.id,
-            sort_order: update.sort_order,
-          }),
-        ),
-      )
+      for (const update of updates) {
+        await updatePosting.mutateAsync({
+          id: update.id,
+          sort_order: update.sort_order,
+        })
+      }
     },
     [updatePosting],
   )

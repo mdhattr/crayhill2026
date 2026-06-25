@@ -86,9 +86,10 @@ export default function AdminTeamEditPage() {
 
   useEffect(() => {
     if (!isCreate || !list || sortOrderSeeded) return
-    const nextOrder =
-      list.reduce((max, item) => Math.max(max, item.sort_order), -1) + 1
-    setForm((current) => ({ ...current, sort_order: nextOrder }))
+    setForm((current) => ({
+      ...current,
+      sort_order: nextSortOrder(list),
+    }))
     setSortOrderSeeded(true)
   }, [isCreate, list, sortOrderSeeded])
 
@@ -398,6 +399,7 @@ export default function AdminTeamEditPage() {
                     id="team-sort-order"
                     type="number"
                     required
+                    min={1}
                     step={1}
                     value={form.sort_order}
                     onChange={(event) =>
@@ -407,7 +409,7 @@ export default function AdminTeamEditPage() {
                     aria-describedby="team-sort-order-help"
                   />
                   <p id="team-sort-order-help" className="mt-1 text-body-3 text-muted">
-                    Lower numbers appear first on the roster page.
+                    Position 1 appears first on the roster page.
                   </p>
                   {fieldErrors.sort_order ? (
                     <p className="mt-1 text-body-3 text-accent-navy">
