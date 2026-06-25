@@ -2,6 +2,7 @@ import { useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { CareersMarkdownBody } from '@/components/CareersMarkdownBody'
 import { LegalMarkdownBody } from '@/components/LegalMarkdownBody'
 import { NewsMarkdownBody } from '@/components/NewsMarkdownBody'
+import { TeamBioMarkdownBody } from '@/components/TeamBioMarkdownBody'
 import {
   applyMarkdownEdit,
   restoreTextareaSelection,
@@ -9,7 +10,7 @@ import {
 } from '@/lib/markdown-editor'
 
 type EditorPane = 'write' | 'preview'
-export type MarkdownPreviewVariant = 'news' | 'careers' | 'legal'
+export type MarkdownPreviewVariant = 'news' | 'careers' | 'legal' | 'team-bio'
 
 type MarkdownEditorWithPreviewProps = {
   id: string
@@ -76,6 +77,9 @@ const PREVIEW_HELP: Record<MarkdownPreviewVariant, string> = {
   legal:
     'Select text and use the toolbar to add Markdown, or type syntax directly. ' +
     'The preview matches the public legal page styling; saved content stays Markdown.',
+  'team-bio':
+    'Write one paragraph per block, separated by a blank line. ' +
+    'The preview matches the public bio page column flow; saved content stays Markdown.',
 }
 
 function toolbarButtonClass(isActive = false): string {
@@ -99,6 +103,9 @@ function MarkdownPreview({
   }
   if (variant === 'legal') {
     return <LegalMarkdownBody content={content} />
+  }
+  if (variant === 'team-bio') {
+    return <TeamBioMarkdownBody content={content} />
   }
   return <NewsMarkdownBody content={content} />
 }

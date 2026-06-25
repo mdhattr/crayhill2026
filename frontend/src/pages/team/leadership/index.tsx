@@ -1,72 +1,16 @@
 import { PageHead } from '@/components/PageHead'
-import { TeamGrid, type TeamMember } from '@/components/TeamGrid'
+import { TeamGrid } from '@/components/TeamGrid'
+import { useTeamList } from '@/api/team'
+import { ApiError } from '@/api/client'
 import { leadershipMeta } from '@/pages/team/leadership/meta'
 
 /**
- * Leadership roster, in design-order (top row first, left-to-right).
- * Schema lives on the shared TeamMember type; this array is just the
- * page-local data.
- *
- * Note on the Katherine Taylor entry: the source asset is filed as
- * `headshot-kassie.jpg` (informal first name) but the comp labels
- * her as "Katherine Taylor". The slug uses the display name so the
- * eventual public URL reads naturally; the asset filename is left
- * alone to avoid a rename that would cascade across the asset
- * pipeline.
- */
-const LEADERSHIP: ReadonlyArray<TeamMember> = [
-  {
-    slug: 'josh-eaton',
-    name: 'Josh Eaton',
-    title: 'Co-Founder',
-    imageSrc: '/images/headshot-josh.jpg',
-  },
-  {
-    slug: 'carlos-mendez',
-    name: 'Carlos Mendez',
-    title: 'Co-Founder',
-    imageSrc: '/images/headshot-carlos.jpg',
-  },
-  {
-    slug: 'joe-thomas',
-    name: 'Joe Thomas',
-    title: 'Chief Financial Officer',
-    imageSrc: '/images/headshot-joe.jpg',
-  },
-  {
-    slug: 'scott-beardsley',
-    name: 'Scott Beardsley',
-    title: 'Chief Operating Officer',
-    imageSrc: '/images/headshot-scott.jpg',
-  },
-  {
-    slug: 'katherine-taylor',
-    name: 'Katherine Taylor',
-    title: 'Head of Marketing and Investor Relations',
-    imageSrc: '/images/headshot-kassie.jpg',
-  },
-  {
-    slug: 'daniel-shlomi',
-    name: 'Daniel Shlomi',
-    title: 'General Counsel',
-    imageSrc: '/images/headshot-daniel.jpg',
-  },
-]
-
-/**
  * Leadership page (/team/leadership). Linked from the TopNav Team
- * dropdown. Renders a single white-background section composed by
- * <TeamGrid />:
- *
- *   - Centered H1 "Leadership" (paper-deep #293A51)
- *   - Body 1 subhead (ink black)
- *   - Three-up card grid: image (hover-zoom) over name (H3) over
- *     title (H5, uppercased by base rule) over "View Bio" CTA
- *     (Body 1 SemiBold, accent → accent-green on hover)
- *
- * See <TeamGrid /> for the full visual + accessibility contract.
+ * dropdown. Roster data comes from GET /api/v1/team?roster=leadership.
  */
 export default function LeadershipPage() {
+  const { data: members, isPending, isError, error } = useTeamList('leadership')
+
   return (
     <>
       <PageHead
@@ -74,12 +18,36 @@ export default function LeadershipPage() {
         description={leadershipMeta.description}
       />
       <main>
-        <TeamGrid
-          heading="Leadership"
-          subheading="The Crayhill team is led by seasoned industry professionals with extensive expertise in asset-based finance and strong, long-standing market relationships."
-          members={LEADERSHIP}
-          bioRoutePrefix="/team/leadership"
-        />
+        {isPending ? (
+          <section className="bg-paper px-6 py-module sm:px-10">
+            <div className="mx-auto max-w-7xl">
+              <p className="text-center text-body-1 text-muted" role="status">
+                Loading team…
+              </p>
+            </div>
+          </section>
+        ) : null}
+
+        {isError ? (
+          <section className="bg-paper px-6 py-module sm:px-10">
+            <div className="mx-auto max-w-7xl">
+              <p className="text-center text-body-1 text-accent-navy" role="alert">
+                {error instanceof ApiError
+                  ? error.message
+                  : 'Unable to load the leadership roster.'}
+              </p>
+            </div>
+          </section>
+        ) : null}
+
+        {!isPending && !isError && members ? (
+          <TeamGrid
+            heading="Leadership"
+            subheading="The Crayhill team is led by seasoned industry professionals with extensive expertise in asset-based finance and strong, long-standing market relationships."
+            members={members}
+            bioRoutePrefix="/team/leadership"
+          />
+        ) : null}
       </main>
     </>
   )

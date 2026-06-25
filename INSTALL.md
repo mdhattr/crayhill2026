@@ -111,7 +111,7 @@ Expected response (DB connectivity may vary depending on your network — see Tr
 
 > **URL note for local vs. production:** PHP's built-in dev server serves files directly from `api/`, so the local URL is `/v1/health.php`. In production behind Nginx/Apache, the path will be rewritten to the canonical `/api/v1/health` form (no `.php` extension, with `/api` prefix). The frontend's API client targets the canonical `/api/v1/...` form and relies on `VITE_API_BASE_URL` to differentiate environments.
 
-> **Frontend ↔ API in dev:** the Vite dev server proxies `/api` to the local PHP server (`http://127.0.0.1:8000`), rewriting the clean URL `/api/v1/<name>` to the file it serves (`/v1/<name>.php`) — see `server.proxy` in `frontend/vite.config.ts`. **Both processes must be running** for News & Insights and Careers to load data:
+> **Frontend ↔ API in dev:** the Vite dev server proxies `/api` to the local PHP server (`http://127.0.0.1:8000`), rewriting the clean URL `/api/v1/<name>` to the file it serves (`/v1/<name>.php`) — see `server.proxy` in `frontend/vite.config.ts`. **Both processes must be running** for News & Insights, Careers, Team, and the admin CMS to load data:
 >
 > ```sh
 > # Terminal 1 — frontend (from frontend/)
@@ -122,6 +122,17 @@ Expected response (DB connectivity may vary depending on your network — see Tr
 > ```
 >
 > `npm run dev:api` runs `scripts/dev-api.sh`, which starts `php -S 127.0.0.1:8000 -t api`. RDS must be reachable from your machine (see "AWS RDS access for local development"). If only `npm run dev` is running, Vite logs `[vite] http proxy error: /v1/news.php ECONNREFUSED` and those pages show loading/error states.
+
+### 5. Load DB content (one-time per environment)
+
+If Leadership / Senior Investment Professionals (or their admin lists) are empty locally, the `team_members` table likely has not been created or seeded yet. From the repo root, with `.config/secrets.env` filled in and RDS reachable:
+
+```sh
+php api/lib/migrate.php 2026_06_25_006_create_team_members.sql
+php api/seeds/load_team_members.php
+```
+
+The loader is idempotent — safe to re-run. See **Database setup → Seed data** for news, careers, and site pages as well.
 
 ### Frontend scripts
 
@@ -414,19 +425,23 @@ api/
 ├── seeds/
 │   ├── news_seed.sql            # committed reproducible seed for the news table
 │   ├── careers_seed.sql         # committed reproducible seed for the careers table
-│   └── site_pages_seed.sql      # legal notice + privacy policy copy
+│   ├── site_pages_seed.sql      # legal notice + privacy policy copy
+│   ├── team_members_data.php    # team roster seed data (PHP array)
+│   └── load_team_members.php    # CLI loader for team_members_data.php
 └── v1/
     ├── health.php               # GET /api/v1/health — smoke check
     ├── news.php                 # GET /api/v1/news (list) + ?slug=<x> (detail)
     ├── pages.php                # GET /api/v1/pages?slug=<x> (static page)
     ├── careers.php              # GET /api/v1/careers (list, full body inline)
+    ├── team.php                 # GET /api/v1/team?roster=<x> (+ ?slug=<y> for bio)
     └── admin/
         ├── login.php            # POST /api/v1/admin/login
         ├── session.php          # GET /api/v1/admin/session
         ├── logout.php           # POST /api/v1/admin/logout
         ├── news.php             # GET/POST/PATCH/DELETE /api/v1/admin/news
         ├── careers.php          # GET/POST/PATCH/DELETE /api/v1/admin/careers
-        └── pages.php            # GET/PATCH /api/v1/admin/pages
+        ├── pages.php            # GET/PATCH /api/v1/admin/pages
+        └── team.php             # GET/POST/PATCH/DELETE /api/v1/admin/team
 ```
 
 ### Endpoints
@@ -454,8 +469,15 @@ api/
 | `GET /api/v1/admin/pages` | `api/v1/admin/pages.php` | All provisioned site pages: `{ id, slug, title, subtitle, status, updated_at }[]`. Requires CMS session. |
 | `GET /api/v1/admin/pages?slug=<slug>` | `api/v1/admin/pages.php` | Single page for editing, including Markdown `content` and `meta_description`. |
 | `PATCH /api/v1/admin/pages` | `api/v1/admin/pages.php` | Update a page. Body must include `id`; other fields are partial. No create/delete — pages are seeded. |
+| `GET /api/v1/team?roster=<roster>` | `api/v1/team.php` | Published roster grid for `leadership` or `senior-investment-professionals`: `{ slug, name, title, imageSrc }[]` with `meta.count`. |
+| `GET /api/v1/team?roster=<roster>&slug=<x>` | `api/v1/team.php` | One published bio with Markdown `content`, contact fields, and `rosterPath`; `404 NOT_FOUND` if missing/draft/wrong roster. |
+| `GET /api/v1/admin/team?roster=<roster>` | `api/v1/admin/team.php` | All non-deleted members for one roster (draft + published), in `sort_order`. Requires CMS session. |
+| `GET /api/v1/admin/team?id=<id>` | `api/v1/admin/team.php` | Single member for editing, including Markdown `content`. |
+| `POST /api/v1/admin/team` | `api/v1/admin/team.php` | Create a member. Body `{ slug, name, card_title, full_title, image_src, email?, linkedin_url?, roster, sort_order, status, content }`. Returns the created row (`201`). |
+| `PATCH /api/v1/admin/team` | `api/v1/admin/team.php` | Update a member. Body must include `id`; other fields are partial. |
+| `DELETE /api/v1/admin/team?id=<id>` | `api/v1/admin/team.php` | Soft-deletes a member (`{ deleted: true, id }`). |
 
-Full response shapes and curl examples live in `docs/data-flow.md` → "News & Insights" and "Careers".
+Full response shapes and curl examples live in `docs/data-flow.md` → "News & Insights", "Careers", and "Team".
 
 ### Conventions
 
@@ -573,8 +595,8 @@ There is currently **no tracking table** for "which migrations have run." Filena
    ```sh
    php api/lib/migrate.php 2026_04_28_002_create_app_user.sql
    ```
-6. Run all subsequent migrations in filename order (e.g. `php api/lib/migrate.php 2026_06_24_003_create_news.sql`, then `php api/lib/migrate.php 2026_06_24_004_create_careers.sql`).
-7. Seed any content domains that ship with data — News & Insights, Careers, and site pages (see "Seed data" below): load `api/seeds/news_seed.sql`, `api/seeds/careers_seed.sql`, and `api/seeds/site_pages_seed.sql` via the `mysql` client.
+6. Run all subsequent migrations in filename order (e.g. `php api/lib/migrate.php 2026_06_24_003_create_news.sql`, then `004`, `005`, `006`, …).
+7. Seed any content domains that ship with data — News & Insights, Careers, site pages, and team rosters (see "Seed data" below): load the SQL seeds via the `mysql` client and run `php api/seeds/load_team_members.php` for team data.
 8. Verify with the health endpoint — `database.selected_schema` should report `"crayhill"` and a separate `CURRENT_USER()` query should return `crayhill_app@%` — then `curl http://127.0.0.1:8000/v1/news.php` and `curl http://127.0.0.1:8000/v1/careers.php` should return the seeded rows.
 
 #### Rotating the app user password
@@ -624,7 +646,16 @@ mysql --host="$DB_HOST" --port="${DB_PORT:-3306}" \
       crayhill < api/seeds/site_pages_seed.sql
 ```
 
-> **Why a `mysql`-loaded seed and not a `*_seed_*.sql` migration through `api/lib/migrate.php`:** the migration runner splits files naively on `;`, and the Markdown post content is full of semicolons — raw `INSERT` SQL would break apart mid-statement. The real `mysql` client parses string literals correctly, so the content survives intact. Small, semicolon-free reference data can still use a numbered `*_seed_*.sql` migration via the runner.
+**Team rosters** (Leadership and Senior Investment Professionals) are seeded into the `team_members` table — migration `006`. Seed data lives in `api/seeds/team_members_data.php` (PHP array, avoids semicolon issues in long bio copy). Load via the PHP loader (uses runtime app credentials from `.config/secrets.env`):
+
+```sh
+# from the repo root, after migration 006 has run.
+php api/seeds/load_team_members.php
+```
+
+Idempotent — upserts on unique `slug`; safe to re-run. After the first load, edit via the CMS or hand-edit `api/seeds/team_members_data.php` to reprovision.
+
+> **Why a `mysql`-loaded seed and not a `*_seed_*.sql` migration through `api/lib/migrate.php`:** the migration runner splits files naively on `;`, and the Markdown post content is full of semicolons — raw `INSERT` SQL would break apart mid-statement. The real `mysql` client parses string literals correctly, so the content survives intact. Team bios use a PHP loader for the same reason. Small, semicolon-free reference data can still use a numbered `*_seed_*.sql` migration via the runner.
 
 > **Regenerating after content edits:** edit the rows directly in the DB (the source of truth) or hand-edit `api/seeds/news_seed.sql`. The original CSV-based cleaning pipeline (`scripts/clean-wp-posts.mjs`) is retained for provenance but its inputs are no longer in the repo.
 

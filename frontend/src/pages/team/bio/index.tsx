@@ -1,48 +1,32 @@
-import { Link, NavLink, useParams } from 'react-router-dom'
+import { Link, NavLink, useLocation, useParams } from 'react-router-dom'
+import { useTeamBio } from '@/api/team'
+import { ApiError } from '@/api/client'
+import type { TeamRoster } from '@/api/types/team'
 import { CtaChevron } from '@/components/CtaChevron'
 import { MaskedIcon } from '@/components/MaskedIcon'
 import { PageHead } from '@/components/PageHead'
-import { TEAM_BIOS } from '@/data/team-bios'
+import { TeamBioMarkdownBody } from '@/components/TeamBioMarkdownBody'
 
 /**
- * Shared bio detail page. This file is intentionally NOT mounted at
- * its own URL — instead, two route patterns in routes.tsx point at
- * this component:
+ * Shared bio detail page. Mounted under two route patterns in routes.tsx:
  *
  *   /team/leadership/:slug
  *   /team/senior-investment-professionals/:slug
  *
- * The component looks the slug up in TEAM_BIOS (the single source of
- * truth for bio content) and either renders the bio or a friendly
- * "not found" panel. Cross-roster typos (e.g. visiting an SIP slug
- * under the leadership prefix) intentionally show the not-found
- * panel rather than rendering the wrong back link, because the
- * roster path lives on the bio entry itself.
- *
- * Page composition (single white section, py-module = 120px):
- *
- *   1. Two-column grid on md+ (1fr image, 3fr content). Image is a
- *      4:5 portrait, matching the team grid card crop so card → bio
- *      transitions don't shift the face.
- *
- *   2. Content column header:
- *        H2 "<Name>" (paper-deep / ink — designer spec is H2 Black).
- *        H5 "<Full Title>" (uppercased by base rule; comma-separated
- *        for multi-role people like Josh).
- *
- *   3. Bio body — paragraphs in a CSS multi-column flow
- *      (columns-1 / md:columns-2 with a 40px column-gap), letting
- *      long paragraphs break across columns the way the comp shows.
- *
- *   4. Footer block (right-aligned within the content column):
- *        - Optional envelope + LinkedIn icons (rendered only when
- *          the bio entry supplies the URLs). Muted by default,
- *          accent-green on hover — same hover language as the
- *          page's primary CTAs.
- *        - "< Team" back link, accent-blue → accent-green on hover.
- *          Points at bio.rosterPath so each roster gets its own
- *          round-trip.
+ * Bio content comes from GET /api/v1/team?roster=<roster>&slug=<slug>.
+ * The roster in the URL must match the member's roster or the page shows
+ * not found (prevents cross-roster slug typos from rendering wrong back links).
  */
+
+function rosterFromPathname(pathname: string): TeamRoster | null {
+  if (pathname.startsWith('/team/senior-investment-professionals/')) {
+    return 'senior-investment-professionals'
+  }
+  if (pathname.startsWith('/team/leadership/')) {
+    return 'leadership'
+  }
+  return null
+}
 
 function EmailIcon() {
   return (
@@ -64,12 +48,13 @@ function EmailIcon() {
   )
 }
 
-/**
- * Rendered when the URL slug isn't in TEAM_BIOS. Lighter weight than
- * a full 404 — keeps the user inside the team section and offers a
- * one-click recovery to the (more useful) Leadership roster.
- */
-function BioNotFound({ slug }: { slug: string }) {
+function BioNotFound({
+  slug,
+  rosterPath,
+}: {
+  slug: string
+  rosterPath: string
+}) {
   return (
     <>
       <PageHead
@@ -85,10 +70,10 @@ function BioNotFound({ slug }: { slug: string }) {
           </p>
           <p className="mt-6">
             <Link
-              to="/team/leadership"
+              to={rosterPath}
               className="text-body-1 font-semibold text-accent hover:text-accent-green"
             >
-              Back to Leadership
+              Back to team
             </Link>
           </p>
         </div>
@@ -98,18 +83,52 @@ function BioNotFound({ slug }: { slug: string }) {
 }
 
 export default function BioPage() {
-  /*
-   * Default to empty string so the TypeScript narrowing below works
-   * cleanly. React Router types `useParams` returns as Partial
-   * (params may be undefined). An empty-string slug is guaranteed
-   * to miss the TEAM_BIOS lookup, which falls through to BioNotFound
-   * — matches the desired behavior for malformed URLs.
-   */
+  const { pathname } = useLocation()
   const { slug = '' } = useParams<{ slug: string }>()
-  const bio = TEAM_BIOS[slug]
+  const urlRoster = rosterFromPathname(pathname)
+  const rosterPath =
+    urlRoster === 'senior-investment-professionals'
+      ? '/team/senior-investment-professionals'
+      : '/team/leadership'
 
-  if (!bio) {
-    return <BioNotFound slug={slug} />
+  const { data: bio, isPending, isError, error } = useTeamBio(urlRoster, slug)
+
+  if (urlRoster === null) {
+    return <BioNotFound slug={slug} rosterPath="/team/leadership" />
+  }
+
+  if (isPending) {
+    return (
+      <>
+        <PageHead title="Loading…" description="Loading team bio." />
+        <main className="bg-paper px-6 py-module sm:px-10">
+          <div className="mx-auto max-w-7xl">
+            <p className="text-body-1 text-muted" role="status">
+              Loading bio…
+            </p>
+          </div>
+        </main>
+      </>
+    )
+  }
+
+  if (isError || !bio || bio.roster !== urlRoster) {
+    if (error instanceof ApiError && error.code !== 'NOT_FOUND') {
+      return (
+        <>
+          <PageHead title="Unable to load bio" description="Team bio error." />
+          <main className="bg-paper px-6 py-module sm:px-10">
+            <div className="mx-auto max-w-3xl text-center">
+              <h1 className="text-paper-deep">Unable to load bio</h1>
+              <p className="mt-6 text-ink" role="alert">
+                {error.message}
+              </p>
+            </div>
+          </main>
+        </>
+      )
+    }
+    return <BioNotFound slug={slug} rosterPath={rosterPath} />
   }
 
   return (
@@ -122,13 +141,6 @@ export default function BioPage() {
         <section className="bg-paper px-6 py-module sm:px-10">
           <div className="mx-auto max-w-7xl">
             <div
-              /*
-               * 1fr image / 3fr content keeps the headshot close to
-               * the 280–310px column seen in the comp at 1280px
-               * content width. items-start so the (variable-height)
-               * content column top-aligns with the image rather
-               * than vertically centering on it.
-               */
               className={
                 'grid grid-cols-1 items-start gap-y-10 ' +
                 'md:grid-cols-[1fr_3fr] md:gap-x-10 md:gap-y-0'
@@ -148,37 +160,10 @@ export default function BioPage() {
                 <h2 className="text-ink">{bio.name}</h2>
                 <h5 className="mt-2 text-ink">{bio.fullTitle}</h5>
 
-                <div
-                  /*
-                   * mt-10 (40px) — tighter than the brand
-                   * `--spacing-element` (90px) because the designer
-                   * comp shows a deliberately small gap between the
-                   * title block and the bio body. Treated as a
-                   * per-section override of the standard rhythm,
-                   * documented inline.
-                   *
-                   * The columns utilities turn the child <p>s into
-                   * a multi-column flow. mb-6 on each paragraph
-                   * supplies the inter-paragraph rhythm Tailwind
-                   * preflight otherwise strips.
-                   */
-                  className="mt-10 columns-1 gap-x-10 md:columns-2"
-                >
-                  {bio.paragraphs.map((para, i) => (
-                    <p key={i} className="mb-6 text-ink">
-                      {para}
-                    </p>
-                  ))}
+                <div className="mt-10">
+                  <TeamBioMarkdownBody content={bio.content} />
                 </div>
 
-                {/*
-                 * Footer block — icons + Team link. Right-aligned
-                 * inside the content column so it sits beneath the
-                 * second bio column, matching the comp. Lives
-                 * OUTSIDE the columns wrapper so the CSS column
-                 * algorithm doesn't try to flow it as another text
-                 * block.
-                 */}
                 <div className="mt-8 flex flex-col items-end gap-4">
                   {(bio.email || bio.linkedinUrl) && (
                     <div className="flex items-center gap-4 text-muted-soft">
@@ -203,14 +188,6 @@ export default function BioPage() {
                           aria-label={`${bio.name} on LinkedIn`}
                           className="group inline-flex focus-visible:outline-none"
                         >
-                          {/*
-                           * Designer-supplied LinkedIn mark, fetched from
-                           * assets and tinted via CSS mask so it inherits the
-                           * same muted → accent-green hover as the rest of the
-                           * contact block. Sized a touch larger than the 20px
-                           * envelope because the asset glyph carries internal
-                           * padding, so this reads at a matching optical size.
-                           */}
                           <MaskedIcon
                             src="/icons/icon-linkedin.svg"
                             className={

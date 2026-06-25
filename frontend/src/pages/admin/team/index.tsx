@@ -1,28 +1,40 @@
 import { useCallback, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate, useParams } from 'react-router-dom'
 import {
-  useAdminCareersList,
-  useDeleteAdminCareersPosting,
-  useUpdateAdminCareersPosting,
-} from '@/api/admin-careers'
+  useAdminTeamList,
+  useDeleteAdminTeamMember,
+  useUpdateAdminTeamMember,
+} from '@/api/admin-team'
 import { ApiError } from '@/api/client'
 import type {
-  AdminCareersListItem,
-  CareerPostingStatus,
-} from '@/api/types/admin-careers'
+  AdminTeamListItem,
+  TeamMemberStatus,
+} from '@/api/types/admin-team'
 import { AdminDragHandle } from '@/components/admin/AdminDragHandle'
 import { useAdminSortableRows } from '@/components/admin/useAdminSortableRows'
 import { PageHead } from '@/components/PageHead'
+import {
+  isTeamRoster,
+  ROSTER_LABELS,
+  ROSTER_PUBLIC_PREFIX,
+  rosterAdminPath,
+} from '@/pages/admin/team/roster'
 
-function StatusSelect({ posting }: { posting: AdminCareersListItem }) {
-  const updatePosting = useUpdateAdminCareersPosting()
+function StatusSelect({
+  member,
+  roster,
+}: {
+  member: AdminTeamListItem
+  roster: Parameters<typeof useUpdateAdminTeamMember>[0]
+}) {
+  const updateMember = useUpdateAdminTeamMember(roster)
   const [error, setError] = useState<string | null>(null)
 
-  async function handleChange(nextStatus: CareerPostingStatus) {
-    if (nextStatus === posting.status) return
+  async function handleChange(nextStatus: TeamMemberStatus) {
+    if (nextStatus === member.status) return
     setError(null)
     try {
-      await updatePosting.mutateAsync({ id: posting.id, status: nextStatus })
+      await updateMember.mutateAsync({ id: member.id, status: nextStatus })
     } catch (cause) {
       setError(
         cause instanceof ApiError
@@ -34,15 +46,15 @@ function StatusSelect({ posting }: { posting: AdminCareersListItem }) {
 
   return (
     <div>
-      <label htmlFor={`status-${posting.id}`} className="sr-only">
-        Status for {posting.title}
+      <label htmlFor={`status-${member.id}`} className="sr-only">
+        Status for {member.name}
       </label>
       <select
-        id={`status-${posting.id}`}
-        value={posting.status}
-        disabled={updatePosting.isPending}
+        id={`status-${member.id}`}
+        value={member.status}
+        disabled={updateMember.isPending}
         onChange={(event) =>
-          handleChange(event.target.value as CareerPostingStatus)
+          handleChange(event.target.value as TeamMemberStatus)
         }
         className="min-w-[8.5rem] rounded border border-rule bg-paper px-3 py-2 text-body-2 text-ink disabled:opacity-60"
       >
@@ -58,21 +70,27 @@ function StatusSelect({ posting }: { posting: AdminCareersListItem }) {
   )
 }
 
-function DeleteButton({ posting }: { posting: AdminCareersListItem }) {
-  const deletePosting = useDeleteAdminCareersPosting()
+function DeleteButton({
+  member,
+  roster,
+}: {
+  member: AdminTeamListItem
+  roster: Parameters<typeof useDeleteAdminTeamMember>[0]
+}) {
+  const deleteMember = useDeleteAdminTeamMember(roster)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleDelete() {
     setError(null)
     try {
-      await deletePosting.mutateAsync(posting.id)
+      await deleteMember.mutateAsync(member.id)
       setPending(false)
     } catch (cause) {
       setError(
         cause instanceof ApiError
           ? cause.message
-          : 'Unable to delete this posting. Try again.',
+          : 'Unable to delete this member. Try again.',
       )
     }
   }
@@ -83,10 +101,10 @@ function DeleteButton({ posting }: { posting: AdminCareersListItem }) {
         <button
           type="button"
           onClick={handleDelete}
-          disabled={deletePosting.isPending}
+          disabled={deleteMember.isPending}
           className="rounded border border-accent-navy bg-accent-navy px-3 py-2 text-body-3 text-paper hover:opacity-90 disabled:opacity-60"
         >
-          Confirm permanent delete
+          Confirm delete
         </button>
         <button
           type="button"
@@ -94,7 +112,7 @@ function DeleteButton({ posting }: { posting: AdminCareersListItem }) {
             setPending(false)
             setError(null)
           }}
-          disabled={deletePosting.isPending}
+          disabled={deleteMember.isPending}
           className="rounded border border-rule px-3 py-2 text-body-3 text-ink hover:bg-paper disabled:opacity-60"
         >
           Cancel
@@ -119,23 +137,32 @@ function DeleteButton({ posting }: { posting: AdminCareersListItem }) {
   )
 }
 
-/** CMS careers list — all postings with status, edit, and delete controls. */
-export default function AdminCareersPage() {
-  const { data: postings, isPending, isError, error } = useAdminCareersList()
-  const updatePosting = useUpdateAdminCareersPosting()
+/** CMS team roster list — members for Leadership or Senior Investment Professionals. */
+export default function AdminTeamListPage() {
+  const { roster: rosterParam = '' } = useParams<{ roster: string }>()
+
+  if (!isTeamRoster(rosterParam)) {
+    return <Navigate to="/admin" replace />
+  }
+
+  const roster = rosterParam
+  const label = ROSTER_LABELS[roster]
+  const publicPath = ROSTER_PUBLIC_PREFIX[roster]
+  const { data: members, isPending, isError, error } = useAdminTeamList(roster)
+  const updateMember = useUpdateAdminTeamMember(roster)
 
   const persistSortOrder = useCallback(
     async (updates: { id: number; sort_order: number }[]) => {
       await Promise.all(
         updates.map((update) =>
-          updatePosting.mutateAsync({
+          updateMember.mutateAsync({
             id: update.id,
             sort_order: update.sort_order,
           }),
         ),
       )
     },
-    [updatePosting],
+    [updateMember],
   )
 
   const {
@@ -148,26 +175,29 @@ export default function AdminCareersPage() {
     handleDrop,
     rowClassName,
   } = useAdminSortableRows({
-    items: postings,
+    items: members,
     onPersistOrder: persistSortOrder,
   })
 
   return (
     <>
-      <PageHead title="Careers" description="Manage job postings." />
+      <PageHead title={label} description={`Manage ${label.toLowerCase()} roster members.`} />
       <main className="flex-1 bg-paper-alt px-6 py-module sm:px-10">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <h1 className="text-paper-deep">Careers</h1>
+              <h1 className="text-paper-deep">{label}</h1>
               <p className="mt-4 max-w-2xl text-body-1 text-ink">
-                Create, edit, and publish open positions. Only published postings
-                appear on the public Careers page, in position order. Drag the
-                handle to reorder.
+                Create, edit, and publish team members for the{' '}
+                <Link to={publicPath} className="text-paper-deep underline">
+                  public {label.toLowerCase()} page
+                </Link>
+                . Only published members appear on the site, in position order.
+                Drag the handle to reorder.
               </p>
             </div>
             <Link
-              to="/admin/careers/new"
+              to={`${rosterAdminPath(roster)}/new`}
               className="inline-flex items-center rounded bg-paper-deep px-5 py-3 text-body-2 text-paper hover:opacity-90"
             >
               Create new
@@ -176,7 +206,7 @@ export default function AdminCareersPage() {
 
           {isPending ? (
             <p className="mt-element text-body-1 text-muted" role="status">
-              Loading postings…
+              Loading members…
             </p>
           ) : null}
 
@@ -184,7 +214,7 @@ export default function AdminCareersPage() {
             <p className="mt-element text-body-1 text-accent-navy" role="alert">
               {error instanceof ApiError
                 ? error.message
-                : 'Unable to load postings.'}
+                : 'Unable to load team members.'}
             </p>
           ) : null}
 
@@ -200,33 +230,35 @@ export default function AdminCareersPage() {
             </p>
           ) : null}
 
-          {!isPending && !isError && postings?.length === 0 ? (
+          {!isPending && !isError && members?.length === 0 ? (
             <p className="mt-element text-body-1 text-muted">
-              No postings yet.{' '}
+              No members yet.{' '}
               <Link
-                to="/admin/careers/new"
+                to={`${rosterAdminPath(roster)}/new`}
                 className="text-paper-deep underline"
               >
-                Create the first posting
+                Create the first member
               </Link>
-              .
+              , or run{' '}
+              <code className="text-ink">php api/seeds/load_team_members.php</code>{' '}
+              from the repo root if you expected seeded data.
             </p>
           ) : null}
 
           {!isPending && !isError && rows.length > 0 ? (
             <div className="mt-element overflow-x-auto">
-              <table className="w-full min-w-[780px] border-collapse text-left">
-                <caption className="sr-only">Careers job postings</caption>
+              <table className="w-full min-w-[940px] border-collapse text-left">
+                <caption className="sr-only">{label} team members</caption>
                 <thead>
                   <tr className="border-b border-rule">
                     <th scope="col" className="w-14 py-3 pr-4 text-body-3 text-muted">
                       <span className="sr-only">Reorder</span>
                     </th>
                     <th scope="col" className="py-3 pr-6 text-body-3 text-muted">
-                      Title
+                      Name
                     </th>
                     <th scope="col" className="py-3 pr-6 text-body-3 text-muted">
-                      Location
+                      Card title
                     </th>
                     <th scope="col" className="py-3 pr-6 text-body-3 text-muted">
                       Position
@@ -240,51 +272,51 @@ export default function AdminCareersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((posting) => (
+                  {rows.map((member) => (
                     <tr
-                      key={posting.id}
-                      className={rowClassName(posting.id)}
+                      key={member.id}
+                      className={rowClassName(member.id)}
                       onDragOver={(event) => {
                         event.preventDefault()
-                        handleDragOver(posting.id)
+                        handleDragOver(member.id)
                       }}
                       onDrop={(event) => {
                         event.preventDefault()
-                        void handleDrop(posting.id)
+                        void handleDrop(member.id)
                       }}
                     >
                       <td className="py-4 pr-4 align-top">
                         <AdminDragHandle
-                          label={`Reorder ${posting.title}`}
+                          label={`Reorder ${member.name}`}
                           disabled={isSaving}
-                          onDragStart={() => handleDragStart(posting.id)}
+                          onDragStart={() => handleDragStart(member.id)}
                           onDragEnd={handleDragEnd}
                         />
                       </td>
                       <td className="py-4 pr-6 align-top">
-                        <p className="text-body-2 text-ink">{posting.title}</p>
+                        <p className="text-body-2 text-ink">{member.name}</p>
                         <p className="mt-1 text-body-3 text-muted">
-                          {posting.slug}
+                          {member.slug}
                         </p>
                       </td>
                       <td className="py-4 pr-6 align-top text-body-2 text-ink">
-                        {posting.location ?? '—'}
+                        {member.card_title}
                       </td>
                       <td className="py-4 pr-6 align-top text-body-2 text-ink">
-                        {posting.sort_order}
+                        {member.sort_order}
                       </td>
                       <td className="py-4 pr-6 align-top">
-                        <StatusSelect posting={posting} />
+                        <StatusSelect member={member} roster={roster} />
                       </td>
                       <td className="py-4 align-top">
                         <div className="flex flex-wrap items-center gap-2">
                           <Link
-                            to={`/admin/careers/${posting.id}/edit`}
+                            to={`${rosterAdminPath(roster)}/${member.id}/edit`}
                             className="rounded border border-rule px-3 py-2 text-body-3 text-ink hover:bg-paper"
                           >
                             Edit
                           </Link>
-                          <DeleteButton posting={posting} />
+                          <DeleteButton member={member} roster={roster} />
                         </div>
                       </td>
                     </tr>

@@ -19,6 +19,10 @@ export const ADMIN_NAV_ITEMS: ReadonlyArray<AdminNavItem> = [
     to: '/admin/pages/legal-notice-and-disclosures/edit',
   },
   { label: 'Privacy policy', to: '/admin/pages/privacy-policy/edit' },
-  { label: 'Team', to: '/admin/team', disabled: true },
+  { label: 'Leadership', to: '/admin/team/leadership' },
+  {
+    label: 'Senior investment professionals',
+    to: '/admin/team/senior-investment-professionals',
+  },
   { label: 'Media library', to: '/admin/media', disabled: true },
 ]

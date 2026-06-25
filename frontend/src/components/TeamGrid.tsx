@@ -60,10 +60,11 @@ export type TeamGridProps = {
  *
  * View Bio CTAs route to `${bioRoutePrefix}/${slug}`, which is
  * handled by the shared <BioPage /> mounted under each roster's
- * `/team/<roster>/:slug` route. Bio content lives in
- * src/data/team-bios.ts; if a slug isn't present there, BioPage
- * renders an in-page "bio not found" panel rather than the global
- * 404 so the user stays inside the team section.
+ * `/team/<roster>/:slug` route. Bio content comes from
+ * GET /api/v1/team?roster=<roster>&slug=<slug>; if the slug is
+ * missing or unpublished, BioPage renders an in-page "bio not found"
+ * panel rather than the global 404 so the user stays inside the team
+ * section.
  */
 export function TeamGrid({
   heading,

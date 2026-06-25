@@ -27,7 +27,7 @@ Boundaries (from `.cursor/rules/00-project.mdc`): the SPA talks to the backend o
 |---|---|---|---|
 | News & Insights | **`news` table on RDS.** Public reads via `GET /api/v1/news`; CMS writes via authenticated `/api/v1/admin/news` (list, create, edit, status toggle, permanent delete). Seeded from [api/seeds/news_seed.sql](../api/seeds/news_seed.sql). | Same table with admin image uploads and audit trail **[planned]** | When image upload + audit ship |
 | Careers | **`careers` table on RDS.** Public reads via `GET /api/v1/careers`; CMS writes via authenticated `/api/v1/admin/careers` (list, create, edit, status toggle, permanent delete). Seeded from [api/seeds/careers_seed.sql](../api/seeds/careers_seed.sql). | Same table with audit trail **[planned]** | When audit trail ships |
-| Team | Hardcoded in [frontend/src/data/team-bios.ts](../frontend/src/data/team-bios.ts) | `GET /api/v1/team` backed by a `team` table **[planned]** | When the admin dashboard ships |
+| Team | **`team_members` table on RDS.** Public reads via `GET /api/v1/team?roster=<roster>` (grid) and `GET /api/v1/team?roster=<roster>&slug=<x>` (bio); CMS writes via authenticated `/api/v1/admin/team` (separate list pages for Leadership and Senior Investment Professionals). Seeded from [api/seeds/team_members_data.php](../api/seeds/team_members_data.php) via [api/seeds/load_team_members.php](../api/seeds/load_team_members.php). | Same table with headshot upload + audit trail **[planned]** | When media library ships |
 | Sectors | Hardcoded in [frontend/src/data/sectors.ts](../frontend/src/data/sectors.ts) | TBD - may stay static | Undecided |
 | Page copy (legal / privacy) | **`site_pages` table on RDS.** Public reads via `GET /api/v1/pages?slug=<x>`; CMS edits via `/api/v1/admin/pages` (edit-only for seeded slugs). Seeded from [api/seeds/site_pages_seed.sql](../api/seeds/site_pages_seed.sql) (source Markdown in [api/seeds/content/](../api/seeds/content/)). | Same table with audit trail **[planned]** | When audit trail ships |
 
@@ -185,6 +185,98 @@ curl -s http://localhost:8000/v1/careers.php
 
 ---
 
+## Team (Leadership & Senior Investment Professionals)
+
+The third DB-backed roster domain. Leadership and Senior Investment Professionals each have a public roster page (`/team/leadership`, `/team/senior-investment-professionals`) and shared bio detail routes (`/team/<roster>/<slug>`). Card titles on the grid may differ from full titles on the bio page (e.g. "Co-Founder" on the card vs "Managing Partner, Co-Founder" on the bio).
+
+### Read flow (live)
+
+```mermaid
+flowchart LR
+  table["crayhill.team_members table"]
+  endpoint["GET /api/v1/team (api/v1/team.php)"]
+  client["frontend/src/api/team.ts (TanStack Query hooks)"]
+  roster["Leadership / SIP pages (TeamGrid)"]
+  bio["Bio detail (pages/team/bio/)"]
+  table -->|"PDO, prepared, TLS"| endpoint
+  endpoint -->|"JSON envelope"| client
+  client -->|"useTeamList"| roster
+  client -->|"useTeamBio"| bio
+```
+
+- **Endpoint:** [api/v1/team.php](../api/v1/team.php) — roster list (`?roster=leadership` or `?roster=senior-investment-professionals`) returns published grid cards (`slug`, `name`, `title`, `imageSrc`); bio detail adds `?slug=<x>` and returns the full Markdown body plus contact fields. Only `status = 'published'` and `deleted_at IS NULL` rows are returned.
+- **Client:** [frontend/src/api/team.ts](../frontend/src/api/team.ts) exposes `useTeamList(roster)` and `useTeamBio(roster, slug)`. Types in [frontend/src/api/types/team.ts](../frontend/src/api/types/team.ts).
+- **Pages:** [frontend/src/pages/team/leadership/](../frontend/src/pages/team/leadership/), [frontend/src/pages/team/senior-investment-professionals/](../frontend/src/pages/team/senior-investment-professionals/), and the shared [frontend/src/pages/team/bio/](../frontend/src/pages/team/bio/) detail view. Bio body renders via [TeamBioMarkdownBody](../frontend/src/components/TeamBioMarkdownBody.tsx) (multi-column paragraph flow).
+
+### Admin flow (live)
+
+Two CMS list pages under `/admin/team/leadership` and `/admin/team/senior-investment-professionals`, each with create/edit forms. Authenticated CRUD via [api/v1/admin/team.php](../api/v1/admin/team.php); frontend hooks in [frontend/src/api/admin-team.ts](../frontend/src/api/admin-team.ts).
+
+### Seed / provenance
+
+Initial rows were exported from the former hardcoded roster pages and bio copy into [api/seeds/team_members_data.php](../api/seeds/team_members_data.php). Load via:
+
+```sh
+php api/seeds/load_team_members.php
+```
+
+Idempotent upsert on unique `slug`. The DB is the source of truth after first load; edit via the CMS or the seed file.
+
+### `team_members` table
+
+Defined by migration [api/migrations/2026_06_25_006_create_team_members.sql](../api/migrations/2026_06_25_006_create_team_members.sql).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `BIGINT UNSIGNED` AUTO_INCREMENT | Surrogate PK. |
+| `slug` | `VARCHAR(255)` UNIQUE | Stable identifier; used in public bio URLs. |
+| `name` | `VARCHAR(255)` | Display name (H2 on bio, H3 on card). |
+| `card_title` | `VARCHAR(255)` | Short title on the roster grid (H5). |
+| `full_title` | `VARCHAR(512)` | Longer title on the bio detail page (H5). |
+| `image_src` | `VARCHAR(512)` | Root-relative headshot path under `/images/`. |
+| `email` | `VARCHAR(255)` NULL | Optional; renders mailto icon on bio. |
+| `linkedin_url` | `VARCHAR(512)` NULL | Optional; renders LinkedIn icon on bio. |
+| `roster` | `ENUM('leadership','senior-investment-professionals')` | Which public roster page the member belongs to. |
+| `sort_order` | `INT` | Ascending display order within the roster. |
+| `status` | `ENUM('published','draft')` | Draft rows are CMS-only. |
+| `content` | `LONGTEXT` | Markdown bio body (paragraphs separated by blank lines). |
+| `created_at` / `updated_at` | `TIMESTAMP` | `updated_at` auto-updates on change. |
+| `deleted_at` | `TIMESTAMP` NULL | Soft delete. |
+
+Indexes: `UNIQUE (slug)`; `(roster, status, sort_order)` backs the published roster query.
+
+### API contract (live)
+
+Roster list:
+
+```json
+{ "data": [ { "slug": "josh-eaton", "name": "Josh Eaton",
+             "title": "Co-Founder", "imageSrc": "/images/headshot-josh.jpg" } ],
+  "error": null, "meta": { "count": 6, "roster": "leadership" } }
+```
+
+Bio detail (`?roster=leadership&slug=josh-eaton`):
+
+```json
+{ "data": { "slug": "josh-eaton", "name": "Josh Eaton",
+            "fullTitle": "Managing Partner, Co-Founder",
+            "imageSrc": "/images/headshot-josh.jpg",
+            "email": "josh.eaton@crayhillcapital.com",
+            "linkedinUrl": "https://www.linkedin.com/in/josh-eaton/",
+            "content": "…markdown…",
+            "rosterPath": "/team/leadership", "roster": "leadership" },
+  "error": null, "meta": null }
+```
+
+curl examples:
+
+```bash
+curl -s 'http://localhost:8000/v1/team.php?roster=leadership'
+curl -s 'http://localhost:8000/v1/team.php?roster=leadership&slug=josh-eaton'
+```
+
+---
+
 ## Site pages (Legal Notice & Privacy Policy)
 
 Fixed-route marketing/legal pages share one table. Each row is keyed by `slug` (matching the public URL segment). There are no individual CMS create/delete operations — pages are provisioned via migration + seed; operators edit copy in place.
@@ -305,6 +397,6 @@ flowchart LR
 
 ## Admin dashboard
 
-**Phase 1 (live):** `/admin` sign-in plus CMS tooling for news, careers, and legal/privacy page copy.
+**Phase 1 (live):** `/admin` sign-in plus CMS tooling for news, careers, legal/privacy page copy, and team rosters (Leadership + Senior Investment Professionals as separate admin pages).
 
-**Planned next:** image uploads and an audit trail.
+**Planned next:** headshot uploads via media library and an audit trail.

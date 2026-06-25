@@ -54,6 +54,8 @@ const AdminNewsPage = lazy(() => import('@/pages/admin/news'))
 const AdminNewsEditPage = lazy(() => import('@/pages/admin/news/edit'))
 const AdminCareersPage = lazy(() => import('@/pages/admin/careers'))
 const AdminCareersEditPage = lazy(() => import('@/pages/admin/careers/edit'))
+const AdminTeamListPage = lazy(() => import('@/pages/admin/team'))
+const AdminTeamEditPage = lazy(() => import('@/pages/admin/team/edit'))
 const AdminPagesIndex = lazy(() => import('@/pages/admin/pages'))
 const AdminSitePageEditPage = lazy(() => import('@/pages/admin/pages/edit'))
 
@@ -82,6 +84,9 @@ const routes: RouteObject[] = [
       { path: 'careers', element: lazyRoute(<AdminCareersPage />) },
       { path: 'careers/new', element: lazyRoute(<AdminCareersEditPage />) },
       { path: 'careers/:id/edit', element: lazyRoute(<AdminCareersEditPage />) },
+      { path: 'team/:roster', element: lazyRoute(<AdminTeamListPage />) },
+      { path: 'team/:roster/new', element: lazyRoute(<AdminTeamEditPage />) },
+      { path: 'team/:roster/:id/edit', element: lazyRoute(<AdminTeamEditPage />) },
       { path: 'pages', element: lazyRoute(<AdminPagesIndex />) },
       {
         path: 'pages/:slug/edit',
