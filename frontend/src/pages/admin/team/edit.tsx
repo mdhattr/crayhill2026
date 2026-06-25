@@ -78,7 +78,7 @@ export default function AdminTeamEditPage() {
   }, [routeKey, isCreate, roster])
 
   useEffect(() => {
-    if (member) {
+    if (!isCreate && member) {
       setForm({
         slug: member.slug,
         name: member.name,
@@ -93,7 +93,7 @@ export default function AdminTeamEditPage() {
         content: member.content,
       })
     }
-  }, [member])
+  }, [isCreate, member])
 
   useEffect(() => {
     if (!isCreate || !list || sortOrderSeeded) return
@@ -145,10 +145,33 @@ export default function AdminTeamEditPage() {
     return errors
   }
 
+  function optionalContactField(value: string): string | null {
+    const trimmed = value.trim()
+    return trimmed === '' ? null : trimmed
+  }
+
+  function normalizeLinkedInUrl(value: string): string | null {
+    const trimmed = value.trim()
+    if (trimmed === '') return null
+    if (/^https?:\/\//i.test(trimmed)) return trimmed
+    return `https://${trimmed}`
+  }
+
+  function readNamedInput(formEl: HTMLFormElement, name: string): string {
+    const el = formEl.elements.namedItem(name)
+    return el instanceof HTMLInputElement ? el.value : ''
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setFormError(null)
     setFieldErrors({})
+
+    const formEl = event.currentTarget
+    // Read email/LinkedIn from the DOM so browser autofill (which skips React
+    // onChange) still persists on save.
+    const emailValue = readNamedInput(formEl, 'email')
+    const linkedinValue = readNamedInput(formEl, 'linkedin_url')
 
     const payload: AdminTeamWritePayload = {
       ...form,
@@ -157,14 +180,8 @@ export default function AdminTeamEditPage() {
       card_title: form.card_title.trim(),
       full_title: form.full_title.trim(),
       image_src: form.image_src.trim(),
-      email:
-        form.email === null || form.email.trim() === ''
-          ? null
-          : form.email.trim(),
-      linkedin_url:
-        form.linkedin_url === null || form.linkedin_url.trim() === ''
-          ? null
-          : form.linkedin_url.trim(),
+      email: optionalContactField(emailValue),
+      linkedin_url: normalizeLinkedInUrl(linkedinValue),
       sort_order: Number(form.sort_order),
       roster,
     }
@@ -393,9 +410,17 @@ export default function AdminTeamEditPage() {
                   </label>
                   <input
                     id="team-email"
+                    name="email"
                     type="email"
+                    autoComplete="email"
                     value={form.email ?? ''}
                     onChange={(event) =>
+                      updateField(
+                        'email',
+                        event.target.value === '' ? null : event.target.value,
+                      )
+                    }
+                    onBlur={(event) =>
                       updateField(
                         'email',
                         event.target.value === '' ? null : event.target.value,
@@ -419,7 +444,9 @@ export default function AdminTeamEditPage() {
                   </label>
                   <input
                     id="team-linkedin"
+                    name="linkedin_url"
                     type="url"
+                    autoComplete="url"
                     value={form.linkedin_url ?? ''}
                     onChange={(event) =>
                       updateField(
@@ -427,6 +454,13 @@ export default function AdminTeamEditPage() {
                         event.target.value === '' ? null : event.target.value,
                       )
                     }
+                    onBlur={(event) =>
+                      updateField(
+                        'linkedin_url',
+                        event.target.value === '' ? null : event.target.value,
+                      )
+                    }
+                    placeholder="https://www.linkedin.com/in/…"
                     className="mt-2 w-full rounded border border-rule bg-paper px-4 py-3 text-body-2 text-ink"
                   />
                   {fieldErrors.linkedin_url ? (

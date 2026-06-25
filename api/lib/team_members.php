@@ -45,8 +45,12 @@ function team_bio_item(array $row): array
         'name' => (string) $row['name'],
         'fullTitle' => (string) $row['full_title'],
         'imageSrc' => (string) $row['image_src'],
-        'email' => $row['email'] !== null ? (string) $row['email'] : null,
-        'linkedinUrl' => $row['linkedin_url'] !== null ? (string) $row['linkedin_url'] : null,
+        'email' => isset($row['email']) && trim((string) $row['email']) !== ''
+            ? trim((string) $row['email'])
+            : null,
+        'linkedinUrl' => isset($row['linkedin_url']) && trim((string) $row['linkedin_url']) !== ''
+            ? trim((string) $row['linkedin_url'])
+            : null,
         'content' => (string) $row['content'],
         'rosterPath' => team_roster_path($roster),
         'roster' => $roster,
