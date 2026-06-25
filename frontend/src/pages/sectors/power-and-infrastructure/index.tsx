@@ -4,7 +4,6 @@ import {
   TransactionsGrid,
   type Transaction,
 } from '@/components/TransactionsGrid'
-import { LatestInSector } from '@/pages/sectors/power-and-infrastructure/LatestInSector'
 import { powerAndInfrastructureMeta } from '@/pages/sectors/power-and-infrastructure/meta'
 
 /*
@@ -86,10 +85,6 @@ const ASSET_TYPES: ReadonlyArray<KeyItem> = [
  *   4. Select Transactions — the shared <TransactionsGrid /> block,
  *      fed with the page-local TRANSACTIONS list above. Three-card
  *      grid on --color-paper-deep.
- *
- *   5. Latest in Power & Infrastructure — see LatestInSector.tsx.
- *      Featured-article block on --color-paper-alt (the page's only
- *      light surface), with an internal CTA to the news index.
  *
  * Layout note on Section 2:
  *   Same alignment trick used on the ABF Credit Opportunities page —
@@ -188,8 +183,6 @@ export default function PowerAndInfrastructurePage() {
         />
 
         <TransactionsGrid heading="Select Transactions" transactions={TRANSACTIONS} />
-
-        <LatestInSector />
       </main>
     </>
   )
