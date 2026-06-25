@@ -820,7 +820,21 @@ Steps for every subsequent deploy of the static frontend after the box is alread
 cd /var/www/crayhill2026
 git pull
 cd frontend
-npm ci                                          # only needed when dependencies changed
+npm ci             # only needed when dependencies changed
+npm run deploy     # builds, then publishes to the docroot + reloads httpd
+```
+
+`npm run deploy` (defined in `frontend/package.json`) runs `npm run build` and then `scripts/deploy-ec2.sh`, which republishes `dist/` to the Apache docroot (`/var/www/crayhill`), fixes ownership to `apache`, re-applies SELinux labels when enforcing, and reloads `httpd`. It clears stale files in the docroot first, so deleted assets don't linger. The script uses `sudo` for the docroot/service steps, so it prompts for your password (or runs straight through with passwordless sudo).
+
+Override the paths on a box with a different layout:
+
+```sh
+CRAYHILL_DOCROOT=/srv/www/crayhill npm run deploy
+```
+
+The manual equivalent (what the script automates) remains:
+
+```sh
 npm run build
 sudo cp -r /var/www/crayhill2026/frontend/dist/. /var/www/crayhill/
 sudo chown -R apache:apache /var/www/crayhill
