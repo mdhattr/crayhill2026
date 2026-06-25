@@ -22,7 +22,7 @@ import { abfCreditOpportunitiesMeta } from '@/pages/strategies/abf-credit-opport
  *
  *   3. Key Asset Types — the shared <KeyItemsList /> block, fed with
  *      the canonical SECTORS list. The eyebrow text is the only
- *      strategy-specific bit. Continues the paper-dark background.
+ *      strategy-specific bit.
  *
  * Layout note on Section 2:
  *   Both columns share a grid row whose height is the taller of (a) the
@@ -114,7 +114,11 @@ export default function ABFCreditOpportunitiesPage() {
           </div>
         </section>
 
-        <KeyItemsList eyebrow="Key Asset Types" items={SECTORS} linked />
+        <KeyItemsList
+          eyebrow="Key Asset Types"
+          items={SECTORS}
+          linked
+        />
       </main>
     </>
   )

@@ -258,10 +258,10 @@ Canonical record of the brand type scale, taken from the designer's hand-off. Th
 | --- | --- | --- | --- | --- | --- | --- |
 | H1 | `<h1>` / `text-h1` | New Science via `--font-display` | Medium / 500 | 72px desktop, fluid down to 40px on mobile (`clamp(2.5rem, 1.25rem + 6vw, 4.5rem)`) | 76px (ratio 76/72) | Title Case |
 | H2 | `<h2>` / `text-h2` | New Science via `--font-display` | Regular / 400 | 48px desktop, fluid down to 30px on mobile (`clamp(1.875rem, 1.1rem + 3.8vw, 3rem)`) | 52px (ratio 52/48) | Title Case |
-| H3 | `<h3>` / `text-h3` | New Science via `--font-display` | Medium / 500 | 28px | 36px | Title Case |
+| H3 | `<h3>` / `text-h3` | New Science via `--font-display` | Medium / 500 | 28px | 36px desktop; 30px mobile | Title Case |
 | H4 | `<h4>` / `text-h4` | New Science via `--font-display` | Regular / 400 | 22px | 28px | Title Case |
 | H5 | `<h5>` / `text-h5` | Montserrat via `--font-sans` (immune to NS swap) | SemiBold / 600 | 18px | 22px | UPPERCASE, 0.02em tracking |
-| Body 1 | `<body>` / `<p>` default / `text-body-1` | Montserrat via `--font-sans` | Regular / 400 | 18px | 24px | Sentence case |
+| Body 1 | `<body>` / `<p>` default / `text-body-1` | Montserrat via `--font-sans` | Regular / 400 | 18px | 27px | Sentence case |
 | Body 2 | `text-body-2` utility | Montserrat via `--font-sans` | Regular / 400 | 16px | 19px | Sentence case |
 | Body 3 | `text-body-3` utility | Montserrat via `--font-sans` | Regular / 400 | 12px | 15px | Sentence case |
 

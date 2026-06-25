@@ -56,35 +56,25 @@ const TRANSACTIONS: ReadonlyArray<Transaction> = [
  *
  * Page composition (top to bottom):
  *
- *   1. Intro — <section> on --color-paper-deep. Two columns on md+:
- *      Left:  H3 description in white.
- *      Right: single hero image (sectors-res-real-estate-hero.jpg),
- *             zooms slightly on hover.
+ *   1. Title — <section> on --color-paper-deep (#293A51). Centered H1
+ *      "Residential Real Estate" in white. Standard module padding.
+ *
+ *   2. Intro — <section> on --color-paper-dark (#1B2636). Two columns
+ *      on md+: left H3 description in white, right single hero image
+ *      (sectors-res-real-estate-hero.jpg), zooms slightly on hover.
  *      `py-[90px]` per designer's explicit module padding annotation.
- *      Unlike the Power & Infrastructure page, this page has no
- *      title banner above the intro; the design hands off with the
- *      two-column content as the first thing the user sees.
  *
- *      Also unlike Power & Infrastructure, the intro has only ONE
- *      hero image (page-behavior note says "Hero Image" singular).
- *      Layout therefore matches the Investment Grade ABF intro
- *      pattern (text in one column, image in the other) rather
- *      than the Power & Infrastructure / ABF Credit Opportunities
- *      pattern (two images stacked in the right column).
+ *      Unlike Power & Infrastructure, the intro has only ONE hero
+ *      image — text in one column, image in the other (same pattern
+ *      as Investment Grade ABF).
  *
- *   2. Key Asset Types — shared <KeyItemsList variant="sector" />
+ *   3. Key Asset Types — shared <KeyItemsList variant="sector" />
  *      with three asset types defined above.
  *
- *   3. Select Transactions — shared <TransactionsGrid /> block with
+ *   4. Select Transactions — shared <TransactionsGrid /> block with
  *      three page-local transactions.
  *
- * Accessibility — visually-hidden H1:
- *   Like the Investment Grade ABF and Origination Platforms pages,
- *   the design does not show a visible <h1>. We ship an sr-only
- *   <h1> so the page has exactly one H1 in the DOM for screen-
- *   reader navigation.
- *
- * Layout note on Section 1:
+ * Layout note on Section 2:
  *   - Mobile (< md): single-column stack, text above image.
  *   - md+: two columns at a 2:3 ratio — text takes less width than
  *     image, matching the relative widths in the screenshot.
@@ -100,15 +90,19 @@ export default function ResidentialRealEstatePage() {
         description={residentialRealEstateMeta.description}
       />
       <main>
+        <section className="bg-paper-deep px-6 py-module sm:px-10">
+          <div className="mx-auto max-w-7xl">
+            <h1 className="text-center text-white">Residential Real Estate</h1>
+          </div>
+        </section>
+
         {/*
-         * Section 1 — designer-specified 90px module top/bottom
+         * Section 2 — designer-specified 90px module top/bottom
          * padding (deviation from the 120px standard, same
          * convention used on Power & Infrastructure Section 2).
          */}
-        <section className="bg-paper-deep px-6 py-[60px] sm:px-10 md:py-[90px]">
+        <section className="bg-paper-dark px-6 py-[60px] sm:px-10 md:py-[90px]">
           <div className="mx-auto max-w-7xl">
-            <h1 className="sr-only">Residential Real Estate</h1>
-
             <div
               className={
                 'grid grid-cols-1 items-start gap-y-12 ' +

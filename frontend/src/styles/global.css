@@ -81,7 +81,7 @@
    * Brand accent light — the lightest swatch in the navy→sky-blue
    * gradient. Same hex as the Specialty Finance bar in the homepage
    * Asset Focus block. Used by the sector-page variant of
-   * <KeyItemsList /> for the divider rules between H3-styled row items
+   * <KeyItemsList /> for the divider rules between H4 row items
    * (designer's explicit spec on the Power & Infrastructure page).
    * Designer hex: #9AC6EB.
    */
@@ -146,7 +146,7 @@
 
   /* Body scale (Body 1 is the document default; 2 and 3 are opt-in). */
   --text-body-1: 18px;
-  --text-body-1--line-height: calc(24 / 18);
+  --text-body-1--line-height: calc(27 / 18);
   --text-body-1--font-weight: 400;
 
   --text-body-2: 16px;
@@ -242,14 +242,13 @@
   }
 
   /*
-   * H3 display copy tightens to 28px leading on phones (the mobile mockups
-   * repeatedly annotate H3 "Leading: 28" — homepage intro, Who We Are quote,
-   * sector hero copy, culture copy), vs. the desktop 36px. H3 is a fixed 28px
-   * font, so line-height: 1 == 28px. This rule is intentionally unlayered so
-   * it overrides the @layer base h3 line-height token below this breakpoint.
+   * H3 on phones: 28px font with 30px leading (2px more than the mockup's
+   * original 28px leading) for readability on narrow viewports. Desktop
+   * keeps the 36px leading from --text-h3--line-height. Unlayered so it
+   * overrides @layer base below this breakpoint.
    */
   h3 {
-    line-height: 1;
+    line-height: calc(30 / 28);
   }
 }
 

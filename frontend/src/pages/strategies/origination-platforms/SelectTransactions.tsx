@@ -7,8 +7,8 @@
  *   - Module top/bottom padding: 120px (`py-module`).
  *   - Background: --color-accent-navy (#374D6C) — the lightest of
  *     the three navies in the brand palette. Distinct from paper-
- *     dark (used for KeyItemsList) and paper-deep (used for the
- *     intro section above), so the page reads as three discrete
+ *     dark (used for the intro section above) and paper-deep (used for
+ *     Key Asset Types), so the page reads as three discrete navy modules
  *     navy modules stacked in increasing lightness.
  *   - Eyebrow: H5 in --color-accent (blue).
  *   - Headline: H2 in white.

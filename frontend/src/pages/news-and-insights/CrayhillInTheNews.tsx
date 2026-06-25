@@ -13,12 +13,21 @@ import { formatDate } from '@/lib/format-date'
  *   - Row title: H4, ink, single line + ellipsis; hover --color-accent-strong.
  *   - Date: Body 3, ink, right-aligned.
  *   - Rows divided by --color-accent-cyan rules, 25px vertical padding.
- *   - "View All" reveals the remaining rows in place.
+ *   - "View All" reveals the remaining rows in place; "View Less" collapses
+ *     back to the initial count.
  * Each row is a single click target (the card-link pattern) linking to the
  * article.
  */
 
 const INITIAL_VISIBLE = 5
+
+const toggleButtonClass =
+  'mt-10 inline-flex items-center gap-1.5 ' +
+  'text-body-1 font-semibold text-accent ' +
+  'transition-colors duration-150 ' +
+  'hover:text-accent-green ' +
+  'focus-visible:text-accent-green focus-visible:underline ' +
+  'focus-visible:outline-none'
 
 type Props = {
   articles: ReadonlyArray<NewsListItem>
@@ -43,11 +52,7 @@ export function CrayhillInTheNews({ articles }: Props) {
           {visible.map((article) => (
             <li
               key={article.slug}
-              className={
-                'group relative border-b border-accent-cyan ' +
-                'focus-within:outline focus-within:outline-2 ' +
-                'focus-within:outline-offset-2 focus-within:outline-accent-strong'
-              }
+              className="group relative border-b border-accent-cyan"
             >
               <div
                 className={
@@ -86,17 +91,21 @@ export function CrayhillInTheNews({ articles }: Props) {
           <button
             type="button"
             onClick={() => setExpanded(true)}
-            className={
-              'mt-10 inline-flex items-center gap-1.5 ' +
-              'text-body-1 font-semibold text-accent ' +
-              'transition-colors duration-150 ' +
-              'hover:text-accent-green ' +
-              'focus-visible:text-accent-green focus-visible:underline ' +
-              'focus-visible:outline-none'
-            }
+            className={toggleButtonClass}
           >
             <CtaChevron />
             View All
+          </button>
+        ) : null}
+
+        {hasMore && expanded ? (
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className={toggleButtonClass}
+          >
+            <CtaChevron direction="left" />
+            View Less
           </button>
         ) : null}
       </div>

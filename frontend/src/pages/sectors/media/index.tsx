@@ -46,41 +46,30 @@ const TRANSACTIONS: ReadonlyArray<Transaction> = [
  *
  * Page composition (top to bottom):
  *
- *   1. Intro — <section> on --color-paper-deep. Two columns on md+:
- *      Left:  H3 description (top) above a smaller hero image
- *             (sectors-media-hero-1.jpg) pinned to the column bottom.
- *      Right: large hero image (sectors-media-hero-2.jpg) filling
- *             the full row height (h-full + object-cover).
+ *   1. Title — <section> on --color-paper-deep (#293A51). Centered H1
+ *      "Media" in white. Standard module padding.
  *
- *      This is a *mirror* of the ABF Credit Opportunities Section 2
- *      and Power & Infrastructure Section 2 layouts — those put the
- *      large image on the LEFT and the (H3 + small image) stack on
- *      the RIGHT. The Media page swaps the sides.
+ *   2. Intro — <section> on --color-paper-dark (#1B2636). Two columns
+ *      on md+: left H3 description above a smaller hero image pinned
+ *      to the column bottom; right large hero image filling the row
+ *      height (h-full + object-cover).
  *
- *      `py-[90px]` designer-specified module padding (same deviation
- *      from the 120px module rhythm used on every other sector
- *      page's intro).
+ *      Mirror of ABF Credit Opportunities Section 2 and Power &
+ *      Infrastructure Section 2 — large image on the right, (H3 +
+ *      small image) stack on the left.
  *
- *      Both images zoom slightly on hover. The page-behavior note
- *      says "Hero Image" singular but the design clearly shows two —
- *      same inconsistency that appeared on the Power & Infrastructure
- *      and Investment Grade ABF specs. Treating both as heroes.
+ *      `py-[90px]` designer-specified module padding (deviation from
+ *      the 120px module rhythm). Both images zoom slightly on hover.
  *
- *   2. Key Asset Types — shared <KeyItemsList variant="sector" />
+ *   3. Key Asset Types — shared <KeyItemsList variant="sector" />
  *      with three asset types defined above.
  *
- *   3. Select Transactions — shared <TransactionsGrid /> block with
+ *   4. Select Transactions — shared <TransactionsGrid /> block with
  *      *two* page-local transactions. See the TRANSACTIONS comment
  *      above and the TransactionsGrid JSDoc for the 2-card layout
  *      treatment.
  *
- * Accessibility — visually-hidden H1:
- *   No visible H1 in the design (no title banner on this page).
- *   We ship an sr-only <h1> for the screen-reader / one-H1-per-page
- *   convention, same as on Residential Real Estate, Investment Grade
- *   ABF, and Origination Platforms.
- *
- * Layout note on Section 1:
+ * Layout note on Section 2:
  *   Both columns share a grid row whose height is the taller of
  *   (a) the right column's large image and (b) the left column's
  *   (H3 text + small image) stack. The right image is set to
@@ -98,15 +87,19 @@ export default function MediaPage() {
     <>
       <PageHead title={mediaMeta.title} description={mediaMeta.description} />
       <main>
+        <section className="bg-paper-deep px-6 py-module sm:px-10">
+          <div className="mx-auto max-w-7xl">
+            <h1 className="text-center text-white">Media</h1>
+          </div>
+        </section>
+
         {/*
-         * Section 1 — designer-specified 90px module top/bottom
+         * Section 2 — designer-specified 90px module top/bottom
          * padding (deviation from the 120px module standard, same
          * convention used on every sector page intro).
          */}
-        <section className="bg-paper-deep px-6 py-[60px] sm:px-10 md:py-[90px]">
+        <section className="bg-paper-dark px-6 py-[60px] sm:px-10 md:py-[90px]">
           <div className="mx-auto max-w-7xl">
-            <h1 className="sr-only">Media</h1>
-
             <div
               className={
                 'grid grid-cols-1 gap-y-12 ' +

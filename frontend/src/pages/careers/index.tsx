@@ -13,6 +13,10 @@ import { careersMeta } from '@/pages/careers/meta'
  * body open/closed in place. Data comes from GET /api/v1/careers (published
  * postings, in sort order), which returns the full body inline.
  *
+ * Page composition:
+ *   - Hero band: centered H1, wide hero image (open-positions-hero.jpg)
+ *   - Open positions: accordion list of published postings from the API
+ *
  * Designer spec (Careers > When Selected / Expanded):
  *   - Collapsed: down-caret + title in ink (black).
  *   - Expanded: caret rotates and the title + caret turn brand blue
@@ -90,10 +94,28 @@ export default function CareersPage() {
       <PageHead title={careersMeta.title} description={careersMeta.description} />
       <main>
         <section className="bg-paper px-6 py-module sm:px-10">
-          <div className="mx-auto max-w-4xl">
+          <div className="mx-auto max-w-7xl">
             <h1 className="text-center text-paper-deep">Careers</h1>
 
-            <h2 className="mt-element text-ink">Open positions</h2>
+            <div className="group mt-element overflow-hidden rounded-image">
+              <img
+                src="/images/open-positions-hero.jpg"
+                alt=""
+                aria-hidden="true"
+                loading="lazy"
+                className={
+                  'block w-full ease-out ' +
+                  'transition-transform duration-700 ' +
+                  'group-hover:scale-105 ' +
+                  'motion-reduce:!transition-none ' +
+                  'motion-reduce:group-hover:!scale-100'
+                }
+              />
+            </div>
+          </div>
+
+          <div className="mx-auto mt-element max-w-4xl">
+            <h2 className="text-ink">Open positions</h2>
 
             <div className="mt-10">
               {isPending ? (

@@ -27,7 +27,7 @@ import { TEAM_BIOS } from '@/data/team-bios'
  *
  *   2. Content column header:
  *        H2 "<Name>" (paper-deep / ink — designer spec is H2 Black).
- *        H5 "<Full Title>" (uppercased by base rule; pipe-separated
+ *        H5 "<Full Title>" (uppercased by base rule; comma-separated
  *        for multi-role people like Josh).
  *
  *   3. Bio body — paragraphs in a CSS multi-column flow

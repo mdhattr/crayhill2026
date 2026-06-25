@@ -11,11 +11,9 @@
  *                 H2 — keeps card → bio identity continuous.
  *   fullTitle     Full title for the bio H5 (uppercased by base
  *                 rule). May be richer than the card's `title`
- *                 (e.g. "Managing Partner | Co-Founder" here vs
- *                 "Co-Founder" on the card). Pipe-separated segments
- *                 use TITLE_SEP (two non-breaking spaces on each side
- *                 of the bar) so the gap survives HTML whitespace
- *                 collapsing — plain spaces would render as one.
+ *                 (e.g. "Managing Partner, Co-Founder" here vs
+ *                 "Co-Founder" on the card). Comma-separated segments
+ *                 use TITLE_SEP (comma + space) between title parts.
  *   imageSrc      Path under /images (Vite copies /assets contents
  *                 via publicDir).
  *   email         Optional. When present, the bio renders an
@@ -55,10 +53,9 @@ const LEADERSHIP: '/team/leadership' = '/team/leadership'
 const SIP: '/team/senior-investment-professionals' =
   '/team/senior-investment-professionals'
 
-// Separator for pipe-joined title segments: two non-breaking spaces on each
-// side of the bar. Regular spaces collapse to one in HTML, so \u00a0 is used
-// to keep the requested 2-space gap visible.
-const TITLE_SEP = '\u00a0\u00a0|\u00a0\u00a0'
+// Separator for multi-part titles: comma + space (reads better on mobile
+// than a vertical bar).
+const TITLE_SEP = ', '
 
 export const TEAM_BIOS: Readonly<Record<string, TeamBio>> = {
   'josh-eaton': {

@@ -8,11 +8,10 @@ import { Link, NavLink } from 'react-router-dom'
  *   - Background: --color-paper-dark (#1B2636)
  *   - Top/bottom padding: 90px desktop, 60px mobile (mobile mockup)
  *   - 5 columns on desktop:
- *       1. Logo (white, 175px) + address + (pinned bottom) copyright + legal
+ *       1. Logo (white, 175px desktop / ~82.5px mobile — matches TopNav)
  *       2. ABOUT title + 4 links (Who We Are + 3 Strategies as flat siblings)
  *       3. SECTORS title + 5 links
- *       4. TEAM title + 4 links (note Careers before Culture, different from
- *          the nav — designer's ordering in each context wins)
+ *       4. TEAM title + 4 links (Culture before Careers — matches nav)
  *       5. NEWS & INSIGHTS title (link) + PARTNER LOGIN title (link) +
  *          LinkedIn icon (link to external profile)
  *   - Blue H5 titles: --color-accent (#57A0DD), uppercase via existing H5 rule
@@ -23,16 +22,17 @@ import { Link, NavLink } from 'react-router-dom'
  * Footer is intentionally NOT data-shared with TopNav:
  *   - The footer's ABOUT column is a FLAT list (Who We Are + 3 Strategies
  *     items as siblings); the nav nests Strategies under About.
- *   - Team order differs (footer: Careers before Culture; nav: opposite).
+ *   - Team order matches TopNav (Culture, then Careers).
  *   - Decoupling means changes to either surface don't bleed into the
  *     other. The duplication of route slugs across two source-of-truth
  *     lists is tolerable at this scale; tighten via a generated sitemap
  *     later if it ever drifts.
  *
- * Mobile responsive behavior (default; no designer mobile spec yet):
- *   - Below md (~768px) the 5 columns collapse to 1 column, stacked in
- *     the same order. The copyright/legal block falls naturally to the
- *     bottom of the left column instead of pinning via flex.
+ * Mobile responsive behavior:
+ *   - Below md (~768px) the 5 columns collapse to 1 column. Copyright
+ *     and legal links render after the menu columns (not under the logo).
+ *   - md+: column 1 pins copyright/legal to the bottom via flex, matching
+ *     the desktop comp.
  */
 
 // ---------------------------------------------------------------------------
@@ -113,8 +113,8 @@ const FOOTER_COLUMNS: ReadonlyArray<ReadonlyArray<FooterTitleBlock>> = [
           label: 'Senior Investment Professionals',
           to: '/team/senior-investment-professionals',
         },
-        { label: 'Careers', to: '/careers' },
         { label: 'Culture', to: '/team/culture' },
+        { label: 'Careers', to: '/careers' },
       ],
     },
   ],
@@ -160,6 +160,30 @@ const fineLinkClass =
   fineTextClass +
   ' hover:underline focus-visible:underline focus-visible:outline-none'
 
+function FooterLegal({ className = '' }: { className?: string }) {
+  return (
+    <div className={className}>
+      <p className={fineTextClass}>
+        Copyright &copy; 2026 Crayhill Capital LLC
+      </p>
+      <p className={'mt-1 ' + fineTextClass}>
+        <NavLink
+          to="/legal-notice-and-disclosures"
+          className={fineLinkClass}
+        >
+          Legal Notice &amp; Disclosures
+        </NavLink>
+        {/* Two non-breaking spaces each side so the gap survives HTML
+            whitespace collapsing (plain spaces would render as one). */}
+        {'\u00a0\u00a0|\u00a0\u00a0'}
+        <NavLink to="/privacy-policy" className={fineLinkClass}>
+          Privacy Policy
+        </NavLink>
+      </p>
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -168,7 +192,7 @@ export function Footer() {
   return (
     <footer className="bg-paper-dark px-6 py-[60px] sm:px-10 md:py-[90px]">
       <div className="grid grid-cols-1 gap-x-10 gap-y-12 md:grid-cols-5">
-        {/* Column 1: logo + address (top), copyright + legal (bottom). */}
+        {/* Column 1: logo + address (top); copyright + legal pinned bottom on md+. */}
         <div className="flex h-full flex-col justify-between gap-12">
           <div>
             <Link to="/" aria-label="Crayhill Capital Management — Home">
@@ -176,7 +200,7 @@ export function Footer() {
                 src="/crayhill-r-logo-svg/crayhill-r-logo-white.svg"
                 alt=""
                 width={175}
-                className="block h-auto w-[175px]"
+                className="block h-auto w-[82.5px] lg:w-[175px]"
               />
             </Link>
             <address className="mt-8 not-italic text-body-2 font-sans text-white">
@@ -186,25 +210,7 @@ export function Footer() {
             </address>
           </div>
 
-          <div>
-            <p className={fineTextClass}>
-              Copyright &copy; 2026 Crayhill Capital LLC
-            </p>
-            <p className={'mt-1 ' + fineTextClass}>
-              <NavLink
-                to="/legal-notice-and-disclosures"
-                className={fineLinkClass}
-              >
-                Legal Notice &amp; Disclosures
-              </NavLink>
-              {/* Two non-breaking spaces each side so the gap survives HTML
-                  whitespace collapsing (plain spaces would render as one). */}
-              {'\u00a0\u00a0|\u00a0\u00a0'}
-              <NavLink to="/privacy-policy" className={fineLinkClass}>
-                Privacy Policy
-              </NavLink>
-            </p>
-          </div>
+          <FooterLegal className="hidden md:block" />
         </div>
 
         {/* Columns 2-5: title blocks + optional item lists. */}
@@ -293,6 +299,9 @@ export function Footer() {
             </div>
           )
         })}
+
+        {/* Mobile only: copyright + legal after the menu columns. */}
+        <FooterLegal className="md:hidden" />
       </div>
     </footer>
   )

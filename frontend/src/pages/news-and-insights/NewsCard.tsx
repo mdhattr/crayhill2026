@@ -51,9 +51,7 @@ export function NewsCard({
     <article
       className={
         'group relative ' +
-        (isLead ? 'flex h-full flex-col ' : '') +
-        'focus-within:outline focus-within:outline-2 ' +
-        'focus-within:outline-offset-4 focus-within:outline-accent-navy'
+        (isLead ? 'flex h-full flex-col ' : '')
       }
     >
       {/* overflow-hidden clips the hover zoom so the image grows within its box */}

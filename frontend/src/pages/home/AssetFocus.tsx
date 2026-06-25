@@ -35,10 +35,9 @@ import { useInViewOnce } from '@/hooks/useInViewOnce'
 //   Duration: how long each card takes to travel from offset → 0.
 //   Stagger:  the per-card delay step (card N starts at N * stagger).
 //   Offset:   how far to the left each card starts (translateX).
-// Total cascade length = stagger * (N - 1) + duration. Keep total under ~1s
-// so it feels purposeful rather than slow.
-const ANIM_DURATION_MS = 600
-const ANIM_STAGGER_MS = 100
+// Total cascade length = stagger * (N - 1) + duration. ~2s at current values.
+const ANIM_DURATION_MS = 1200
+const ANIM_STAGGER_MS = 200
 const ANIM_OFFSET_PX = 48
 
 export function AssetFocus() {

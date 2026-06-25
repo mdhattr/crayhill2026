@@ -23,10 +23,7 @@ import { useInViewOnce } from '@/hooks/useInViewOnce'
  *   - Used on sector deep-dive pages (Power & Infrastructure, etc).
  *   - Standard module padding: `py-module` (120px top and bottom) —
  *     the designer's explicit per-element annotation on this page.
- *   - Items as <h3> in white (larger headline scale; the items
- *     here are the canonical "asset types" of the sector, which the
- *     design treats as more prominent than the strategy-page
- *     subdivisions).
+ *   - Items as <h4> in white (same scale as strategy pages).
  *   - Dividers as --color-accent-light (#9AC6EB) — the lightest
  *     swatch in the brand navy→sky-blue gradient.
  *
@@ -40,7 +37,7 @@ import { useInViewOnce } from '@/hooks/useInViewOnce'
  *     canonical sector page.
  *
  * Both variants:
- *   - <section> on --color-paper-dark.
+ *   - <section> on --color-paper-deep (#293A51).
  *   - H5 eyebrow in --color-accent (blue), uppercase + tracking from
  *     the H5 base rule.
  *   - The list is bracketed top and bottom by the same divider rule.
@@ -121,7 +118,7 @@ export function KeyItemsList({
 
   return (
     <section
-      className={`bg-paper-dark px-6 sm:px-10 ${styles.sectionPadding}`}
+      className={`bg-paper-deep px-6 sm:px-10 ${styles.sectionPadding}`}
     >
       <div className="mx-auto max-w-7xl">
         <h5 className="text-accent">{eyebrow}</h5>
@@ -145,9 +142,8 @@ export function KeyItemsList({
               'hover:text-accent-green ' +
               'focus-visible:text-accent-green focus-visible:outline-none'
 
-            // Visually-styling = semantic tag (per brand rule):
-            // strategy variant renders H4 items, sector variant H3.
-            const HeadingTag = variant === 'sector' ? 'h3' : 'h4'
+            // Visually-styling = semantic tag (per brand rule): all items
+            // are <h4> so they inherit H4 typography from @layer base.
             const isLink = linked && Boolean(item.to)
 
             return (
@@ -160,13 +156,13 @@ export function KeyItemsList({
                 }}
               >
                 {isLink ? (
-                  <HeadingTag>
+                  <h4>
                     <NavLink to={item.to as string} className={linkClass}>
                       {item.label}
                     </NavLink>
-                  </HeadingTag>
+                  </h4>
                 ) : (
-                  <HeadingTag className={rowClass}>{item.label}</HeadingTag>
+                  <h4 className={rowClass}>{item.label}</h4>
                 )}
               </li>
             )

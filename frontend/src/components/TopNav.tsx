@@ -712,10 +712,11 @@ export function TopNav() {
             alt=""
             width={175}
             /*
-             * 75px on the compact (hamburger) header per the mobile mockup,
-             * scaling to the full 175px once the desktop nav appears at lg.
+             * ~82.5px on the compact (hamburger) header (~10% above the
+             * prior 75px mobile spec); 175px from lg up. Footer logo
+             * uses the same mobile/desktop widths for consistency.
              */
-            className="block h-auto w-[75px] lg:w-[175px]"
+            className="block h-auto w-[82.5px] lg:w-[175px]"
           />
         </Link>
 

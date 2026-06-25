@@ -21,9 +21,8 @@ import { homeMeta } from '@/pages/home/meta'
  * required later, swap this section to a JS/scroll-driven implementation
  * (IntersectionObserver + translateY, or CSS scroll-driven animations).
  *
- * The hero image is purely aesthetic; the actual top-of-page copy lives in
- * the intro block below. The hero is therefore marked aria-hidden so screen
- * readers skip it.
+ * Hero height: full viewport on md+; ~75vh on mobile (25% shorter than
+ * full-screen so the intro block arrives sooner on small screens).
  */
 export default function HomePage() {
   return (
@@ -32,7 +31,7 @@ export default function HomePage() {
       <main>
         <section
           aria-hidden="true"
-          className="h-screen w-full bg-cover bg-fixed bg-center bg-no-repeat"
+          className="h-[75vh] w-full bg-cover bg-fixed bg-center bg-no-repeat md:h-screen"
           style={{ backgroundImage: "url('/images/homepage-hero.jpg')" }}
         />
 

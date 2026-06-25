@@ -60,8 +60,8 @@ const TENETS: ReadonlyArray<Tenet> = [
  * scanning the headline, and a similar stagger to Our Approach
  * so the cadence reads as part of the same site's vocabulary.
  */
-const ANIM_DURATION_MS = 600
-const ANIM_STAGGER_MS = 120
+const ANIM_DURATION_MS = 1200
+const ANIM_STAGGER_MS = 240
 
 export function IdeaGenerationTenets() {
   const [gridRef, inView] = useInViewOnce<HTMLDivElement>()

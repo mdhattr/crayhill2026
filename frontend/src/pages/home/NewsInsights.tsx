@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useNewsList } from '@/api/news'
 import { CtaChevron } from '@/components/CtaChevron'
@@ -12,7 +13,7 @@ import { resolveNewsImage } from '@/lib/news-image'
  *
  * Designer spec (annotated screenshot):
  *   - Background: white
- *   - Module padding: 120px top, 90px bottom
+ *   - Module padding: 120px top + bottom on desktop (`py-module`); 60px mobile
  *   - 90px gap between H2 and the card row
  *   - Headline "News & Insights": H2, ink. Clickable → /news-and-insights.
  *   - Each card is fully clickable (image + text both link to the article).
@@ -20,8 +21,8 @@ import { resolveNewsImage } from '@/lib/news-image'
  *   - Date line: Body 3, ink.
  *   - CTA: "› Read More", Body 1 SemiBold, --color-accent-navy (#374D6C).
  *   - CTA hover: --color-accent-green (#92BE4B).
- *   - Animation: cards slide up from below, staggered, when the section
- *     enters the viewport.
+ *   - Animation: cards slide in from below and the left, staggered left →
+ *     right, when the section enters the viewport.
  *
  * Data source:
  *   The three cards are the most recent published posts from
@@ -41,13 +42,15 @@ import { resolveNewsImage } from '@/lib/news-image'
  *       (selectable for users who want to copy them) rather than getting
  *       wrapped in nested links.
  *     - Standard "card link" pattern, well-supported across AT.
- *   Focus indication uses `focus-within` on the article so keyboard users
- *   see the whole card outlined when the inner link gains focus.
  */
 
-// Slide-up entrance animation tuning. Keep total cascade under ~1s.
-const ANIM_DURATION_MS = 600
-const ANIM_STAGGER_MS = 120
+// Diagonal slide-in: each card rises from below and travels rightward into
+// place. Stagger steps left → right. Total cascade ≈ stagger * 2 + duration.
+const ANIM_DURATION_MS = 1500
+const ANIM_STAGGER_MS = 300
+const ANIM_OFFSET_Y_PX = 80
+const ANIM_OFFSET_X_BASE_PX = 48
+const ANIM_OFFSET_X_STEP_PX = 24
 
 /** Skeleton placeholders shown while the post list is loading. */
 function NewsSkeleton() {
@@ -72,18 +75,43 @@ function NewsSkeleton() {
 }
 
 export function NewsInsights() {
-  // The reveal observer is attached to the <section> (always mounted) rather
-  // than the card grid: the grid only renders once the post list resolves, so
-  // a ref on it would mount too late for the one-shot effect in useInViewOnce
-  // — leaving the cards stuck at opacity-0.
-  const [sectionRef, inView] = useInViewOnce<HTMLElement>()
+  // Observe the section shell (always mounted). Cards mount later once the
+  // API resolves, so `revealed` is a separate gate: it only flips after
+  // both the section is in view AND cards exist, with a double-rAF so the
+  // browser paints the hidden state before transitioning (otherwise cards
+  // that mount while the section is already visible skip the animation).
+  const [sectionRef, sectionInView] = useInViewOnce<HTMLElement>()
   const { data, isPending, isError } = useNewsList()
   const articles = (data ?? []).slice(0, 3)
+  const cardsReady = !isPending && !isError && articles.length > 0
+
+  const [revealed, setRevealed] = useState(false)
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setRevealed(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!cardsReady || !sectionInView || revealed) return
+
+    let cancelled = false
+    const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!cancelled) setRevealed(true)
+      })
+    })
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(frame)
+    }
+  }, [cardsReady, sectionInView, revealed])
 
   return (
     <section
       ref={sectionRef}
-      className="bg-paper px-6 pt-module pb-element sm:px-10"
+      className="bg-paper px-6 py-module sm:px-10"
     >
       <h2 className="text-center text-ink">
         <NavLink
@@ -125,18 +153,16 @@ export function NewsInsights() {
                 // focus-within).
                 className={
                   'group relative ' +
-                  'focus-within:outline focus-within:outline-2 ' +
-                  'focus-within:outline-offset-4 focus-within:outline-accent-navy ' +
                   'transition-[transform,opacity] ease-out ' +
-                  'motion-reduce:!translate-y-0 motion-reduce:!opacity-100 ' +
-                  'motion-reduce:!transition-none ' +
-                  (inView
-                    ? 'translate-y-0 opacity-100'
-                    : 'translate-y-12 opacity-0')
+                  'motion-reduce:!opacity-100 motion-reduce:!transition-none ' +
+                  (revealed ? 'opacity-100' : 'opacity-0')
                 }
                 style={{
                   transitionDuration: `${ANIM_DURATION_MS}ms`,
                   transitionDelay: `${i * ANIM_STAGGER_MS}ms`,
+                  transform: revealed
+                    ? 'translate(0, 0)'
+                    : `translate(${-(ANIM_OFFSET_X_BASE_PX + i * ANIM_OFFSET_X_STEP_PX)}px, ${ANIM_OFFSET_Y_PX}px)`,
                 }}
               >
                 <div className="overflow-hidden rounded-image">

@@ -10,7 +10,7 @@ import { useInViewOnce } from '@/hooks/useInViewOnce'
  *   - Headline "Our Approach": H1, --color-paper-deep (#293A51), centered
  *   - Subhead: Body 1, ink, centered. Ends with a colon — it's an intro
  *     sentence for the four cards that follow.
- *   - Four principle cards in a row:
+ *   - Four principle cards in a row (centered text and icons):
  *       Icon (45px tall): default --color-accent, hover --color-accent-green
  *       Title:  Body 2 SemiBold, ink (rendered in an <h3> for screen-
  *               reader heading navigation — see comment below)
@@ -88,8 +88,8 @@ const PRINCIPLES: ReadonlyArray<Principle> = [
 // Slide-in animation tuning. Same family as the homepage AssetFocus
 // cascade; small differences (slightly longer duration, slightly smaller
 // stagger) tuned by eye for a 4-card row of taller content.
-const ANIM_DURATION_MS = 650
-const ANIM_STAGGER_MS = 110
+const ANIM_DURATION_MS = 1625
+const ANIM_STAGGER_MS = 275
 
 export function OurApproach() {
   const [gridRef, inView] = useInViewOnce<HTMLDivElement>()
@@ -117,7 +117,7 @@ export function OurApproach() {
             <div
               key={p.title}
               className={
-                'group transition-[transform,opacity] ease-out ' +
+                'group text-center transition-[transform,opacity] ease-out ' +
                 'motion-reduce:!translate-x-0 motion-reduce:!opacity-100 ' +
                 'motion-reduce:!transition-none ' +
                 (inView
@@ -132,7 +132,7 @@ export function OurApproach() {
               <MaskedIcon
                 src={p.iconPath}
                 className={
-                  'block h-[45px] w-[45px] bg-accent ' +
+                  'mx-auto block h-[45px] w-[45px] bg-accent ' +
                   'transition-colors duration-200 ' +
                   'group-hover:bg-accent-green'
                 }

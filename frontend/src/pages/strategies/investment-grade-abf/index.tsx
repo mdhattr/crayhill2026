@@ -27,30 +27,19 @@ const ASSET_TYPES: ReadonlyArray<KeyItem> = [
  *
  * Page composition (top to bottom):
  *
- *   1. Intro — <section> on --color-paper-deep.
- *        Left:  paragraph of body copy (white).
- *        Right: hero image (strategies-inv-grade-hero.jpg). Zooms
- *               slightly on hover (CSS group-hover; same pattern as
- *               the WhoWeArePage and ABF Credit Opportunities hero
- *               images).
- *      120px module top/bottom padding — the standard module rhythm.
- *      Unlike the ABF Credit Opportunities page, this one has no
- *      separate title banner above the intro; the design hands off
- *      with the two-column content as the first thing the user sees.
+ *   1. Title — <section> on --color-paper-deep (#293A51). Centered H1
+ *      "Investment Grade ABF" in white. Standard module padding.
  *
- *   2. Key Asset Types — the shared <KeyItemsList /> block, fed with
- *      the page-local ASSET_TYPES list (defined above; see comment
- *      for why it isn't in @/data/sectors). Continues on
- *      --color-paper-dark.
+ *   2. Intro — <section> on --color-paper-dark (#1B2636). Two-column row:
+ *        left intro copy as <h3> (white), right hero image. Hero zooms on
+ *        hover (same group-hover pattern as other strategy pages).
+ *      120px module top/bottom padding.
  *
- * Accessibility note — visually-hidden H1:
- *   The design does not show a visible <h1> on this page; the title
- *   "Investment Grade ABF" lives in the TopNav breadcrumb / page
- *   title bar / document <title>. To keep the page navigable for
- *   screen readers and to satisfy "every page has exactly one H1",
- *   we ship an sr-only <h1>. The visual design is unchanged.
+ *   3. Key Asset Types — the shared <KeyItemsList /> block on
+ *      --color-paper-deep, fed with the page-local ASSET_TYPES list
+ *      (defined above; see comment for why it isn't in @/data/sectors).
  *
- * Layout note on Section 1:
+ * Layout note on Section 2:
  *   - Mobile (< md): single column stack, text above image, 12-unit
  *     vertical gap between them.
  *   - md+: two columns with a 2:3 ratio (image gets slightly more
@@ -69,15 +58,19 @@ export default function InvestmentGradeABFPage() {
       <main>
         <section className="bg-paper-deep px-6 py-module sm:px-10">
           <div className="mx-auto max-w-7xl">
-            <h1 className="sr-only">Investment Grade ABF</h1>
+            <h1 className="text-center text-white">Investment Grade ABF</h1>
+          </div>
+        </section>
 
+        <section className="bg-paper-dark px-6 py-module sm:px-10">
+          <div className="mx-auto max-w-7xl">
             <div
               className={
                 'grid grid-cols-1 items-start gap-y-12 ' +
                 'md:grid-cols-[2fr_3fr] md:gap-x-10 md:gap-y-0'
               }
             >
-              <p className="text-white">
+              <h3 className="text-white">
                 Crayhill&rsquo;s investment grade ABF program is designed for
                 institutional investors that require investment grade credit
                 quality, predictable income, and low risk-weighted capital
@@ -85,7 +78,7 @@ export default function InvestmentGradeABFPage() {
                 referencing pools of real or financial assets structured to
                 achieve investment grade ratings while delivering the
                 enhanced yield and diversification of private markets.
-              </p>
+              </h3>
 
               <div className="group overflow-hidden rounded-image">
                 <img

@@ -106,18 +106,9 @@ export function TeamGrid({
                * `relative` anchors the H3 link's ::after overlay so
                * it fills the card. `group` exposes hover/focus-
                * within to descendants (image and CTA span both
-               * react). `has-[:focus-visible]` paints the focus ring
-               * ONLY for keyboard focus — a mouse click on the card
-               * should open the bio without highlighting the box (the
-               * link itself hides its own outline so we don't
-               * double-paint).
+               * react).
                */
-              className={
-                'group relative ' +
-                'has-[:focus-visible]:outline has-[:focus-visible]:outline-2 ' +
-                'has-[:focus-visible]:outline-offset-4 ' +
-                'has-[:focus-visible]:outline-accent-navy'
-              }
+              className="group relative"
             >
               <div className="overflow-hidden rounded-image">
                 <img
