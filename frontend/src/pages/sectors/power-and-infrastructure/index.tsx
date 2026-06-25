@@ -116,13 +116,14 @@ export default function PowerAndInfrastructurePage() {
         </section>
 
         {/*
-         * Section 2 — designer-specified 90px module top/bottom
-         * padding. Written as an arbitrary value rather than
-         * `py-element` to flag intentional deviation from the
-         * standard 120px module rhythm (same convention used on the
-         * ABF Credit Opportunities Section 2).
+         * Section 2 — designer-specified module padding: 90px on
+         * desktop (an intentional deviation from the standard 120px
+         * rhythm, hence an arbitrary value rather than `py-module`),
+         * tightening to the standard 60px mobile module padding below
+         * md per the mobile mockup. Same convention as the ABF Credit
+         * Opportunities Section 2.
          */}
-        <section className="bg-paper-deep px-6 py-[90px] sm:px-10">
+        <section className="bg-paper-deep px-6 py-[60px] sm:px-10 md:py-[90px]">
           <div
             className={
               'mx-auto grid max-w-7xl grid-cols-1 gap-y-12 ' +
@@ -136,8 +137,12 @@ export default function PowerAndInfrastructurePage() {
                 aria-hidden="true"
                 loading="lazy"
                 className={
-                  'block w-full ease-out ' +
-                  'md:h-full md:object-cover ' +
+                  // Mobile: fixed 425px tall, cropped, per the mobile
+                  // mockup's "1st Image height: 425px". On md+ h-full +
+                  // object-cover fills the grid cell so this image's bottom
+                  // aligns with the small image in the right column.
+                  'block h-[425px] w-full object-cover ease-out ' +
+                  'md:h-full ' +
                   'transition-transform duration-700 ' +
                   'group-hover:scale-105 ' +
                   'motion-reduce:!transition-none ' +
@@ -162,7 +167,9 @@ export default function PowerAndInfrastructurePage() {
                   aria-hidden="true"
                   loading="lazy"
                   className={
-                    'block w-full ease-out ' +
+                    // Mobile: fixed 225px tall, cropped, per the mockup's
+                    // "2nd Image height: 225px"; natural height on md+.
+                    'block h-[225px] w-full object-cover ease-out md:h-auto ' +
                     'transition-transform duration-700 ' +
                     'group-hover:scale-105 ' +
                     'motion-reduce:!transition-none ' +

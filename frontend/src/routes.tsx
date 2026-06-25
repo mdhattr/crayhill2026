@@ -44,6 +44,10 @@ const CulturePage = lazy(() => import('@/pages/team/culture'))
 const CareersPage = lazy(() => import('@/pages/careers'))
 const NewsAndInsightsPage = lazy(() => import('@/pages/news-and-insights'))
 const NewsArticlePage = lazy(() => import('@/pages/news-and-insights/detail'))
+const LegalNoticeAndDisclosuresPage = lazy(
+  () => import('@/pages/legal-notice-and-disclosures'),
+)
+const PrivacyPolicyPage = lazy(() => import('@/pages/privacy-policy'))
 
 /**
  * Suspense fallback for lazy-loaded pages. Intentionally invisible — a brief
@@ -122,6 +126,11 @@ const routes: RouteObject[] = [
         path: '/news-and-insights/:slug',
         element: lazyRoute(<NewsArticlePage />),
       },
+      {
+        path: '/legal-notice-and-disclosures',
+        element: lazyRoute(<LegalNoticeAndDisclosuresPage />),
+      },
+      { path: '/privacy-policy', element: lazyRoute(<PrivacyPolicyPage />) },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

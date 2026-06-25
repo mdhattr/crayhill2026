@@ -551,23 +551,33 @@ function MenuIcon({ open }: { open: boolean }) {
   )
 }
 
-const mobileLinkClass =
-  'block py-3 text-ink ' +
+// Base for a mobile menu row. Color is applied per depth in MobileNavItem:
+// top-level + first-level links are H4 black; the deepest links (the
+// Strategies sub-items) are "H4, Light" (#8B8A8A) per the mobile mockup.
+// py-[15px] gives ~30px between adjacent titles ("Padding between main page
+// titles: 30px") while keeping a comfortable tap target.
+const mobileLinkBase =
+  'block py-[15px] ' +
   'hover:underline focus-visible:underline focus-visible:outline-none'
 
 const mobileDisclosureTriggerClass =
-  'flex w-full items-center justify-between gap-2 py-3 text-left text-ink ' +
+  'flex w-full items-center justify-between gap-2 py-[15px] text-left text-ink ' +
   'bg-transparent border-0 cursor-pointer appearance-none ' +
   'focus-visible:underline focus-visible:outline-none'
 
 function MobileNavItem({
   item,
+  depth,
   onNavigate,
 }: {
   item: NavItem
+  /** 0 = top-level. Links at depth >= 2 render in the "Light" subtext color. */
+  depth: number
   onNavigate: () => void
 }) {
   if (item.kind === 'link') {
+    const linkClass =
+      mobileLinkBase + (depth >= 2 ? ' text-muted-soft' : ' text-ink')
     return (
       <li>
         <h4>
@@ -576,17 +586,13 @@ function MobileNavItem({
               href={item.to}
               target="_blank"
               rel="noopener noreferrer"
-              className={mobileLinkClass}
+              className={linkClass}
               onClick={onNavigate}
             >
               {item.label}
             </a>
           ) : (
-            <NavLink
-              to={item.to}
-              className={mobileLinkClass}
-              onClick={onNavigate}
-            >
+            <NavLink to={item.to} className={linkClass} onClick={onNavigate}>
               {item.label}
             </NavLink>
           )}
@@ -594,14 +600,18 @@ function MobileNavItem({
       </li>
     )
   }
-  return <MobileDisclosure item={item} onNavigate={onNavigate} />
+  return (
+    <MobileDisclosure item={item} depth={depth} onNavigate={onNavigate} />
+  )
 }
 
 function MobileDisclosure({
   item,
+  depth,
   onNavigate,
 }: {
   item: DisclosureItem
+  depth: number
   onNavigate: () => void
 }) {
   const [open, setOpen] = useState(false)
@@ -623,16 +633,14 @@ function MobileDisclosure({
       </h4>
 
       {open && (
-        // Nested rows indent one step and sit on a hairline so the
-        // hierarchy reads at a glance in the flat accordion.
-        <ul
-          id={panelId}
-          className="ml-3 border-l border-rule-soft pl-3"
-        >
+        // Nested rows indent one step so the hierarchy reads at a glance in
+        // the flat accordion (the designer comp has no divider lines).
+        <ul id={panelId} className="ml-4">
           {item.children.map((child) => (
             <MobileNavItem
               key={child.kind === 'link' ? child.to : child.label}
               item={child}
+              depth={depth + 1}
               onNavigate={onNavigate}
             />
           ))}
@@ -692,13 +700,22 @@ export function TopNav() {
 
   return (
     <header ref={headerRef} className="relative z-40 bg-paper-alt">
-      <div className="flex items-center justify-between px-6 py-6 sm:px-10 lg:py-10">
+      {/*
+       * py-5 (20px) on mobile per the mobile mockup's "Top padding: 20px
+       * above logo"; the full 40px (py-10) returns at lg where the desktop
+       * header layout kicks in.
+       */}
+      <div className="flex items-center justify-between px-6 py-5 sm:px-10 lg:py-10">
         <Link to="/" aria-label="Crayhill Capital Management — Home">
           <img
             src="/crayhill-r-logo-svg/crayhill-r-logo-color.svg"
             alt=""
             width={175}
-            className="block h-auto w-[140px] sm:w-[175px]"
+            /*
+             * 75px on the compact (hamburger) header per the mobile mockup,
+             * scaling to the full 175px once the desktop nav appears at lg.
+             */
+            className="block h-auto w-[75px] lg:w-[175px]"
           />
         </Link>
 
@@ -762,18 +779,27 @@ export function TopNav() {
       {mobileOpen && (
         <div
           id={mobilePanelId}
+          /*
+           * Designer mobile spec: the open menu is a white takeover panel
+           * (min-h fills the viewport below the header), with 50px top/bottom
+           * padding. Background is white (bg-paper) rather than the #F3F3F3
+           * header bar. Stays scrollable if the expanded accordion exceeds the
+           * viewport.
+           */
           className={
-            'absolute inset-x-0 top-full z-40 max-h-[80dvh] overflow-y-auto ' +
-            'border-t border-rule-soft bg-paper-alt px-6 pb-8 pt-2 shadow-lg ' +
+            'absolute inset-x-0 top-full z-40 ' +
+            'max-h-[calc(100dvh_-_100%)] min-h-[calc(100dvh_-_100%)] overflow-y-auto ' +
+            'border-t border-rule-soft bg-paper px-6 py-[50px] ' +
             'lg:hidden'
           }
         >
           <nav aria-label="Primary">
-            <ul className="divide-y divide-rule-soft">
+            <ul>
               {NAV_ITEMS.map((item) => (
                 <MobileNavItem
                   key={item.kind === 'link' ? item.to : item.label}
                   item={item}
+                  depth={0}
                   onNavigate={() => setMobileOpen(false)}
                 />
               ))}

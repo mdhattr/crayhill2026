@@ -11,11 +11,11 @@ import { useInViewOnce } from '@/hooks/useInViewOnce'
  *
  * Designer spec (annotated screenshot):
  *   - Background: --color-paper-alt (#F3F3F3)
- *   - Module padding: 120px top + bottom
+ *   - Module padding: 120px top + bottom desktop, 60px mobile (py-module)
  *   - Headline "Asset Focus": H1, --color-paper-deep (#293A51), centered
- *   - 90px gap between headline and bar row
+ *   - 90px gap between headline and bar row (kept at 90px on mobile too)
  *   - 5 colored bars, 10px tall, gradient navy → light blue
- *   - 40px gap between each bar and its label
+ *   - 40px gap between each bar and its label (30px on mobile)
  *   - Label: H3, ink (black) default; --color-accent-green (#92BE4B) on
  *     hover / click / keyboard focus
  *   - Animation: each (bar + label) unit slides in from the left, with a
@@ -54,8 +54,15 @@ export function AssetFocus() {
 
       <ul
         ref={listRef}
+        /*
+         * 90px gap between the "Asset Focus" headline and the bar row on
+         * BOTH mobile and desktop. The designer's mobile mockup explicitly
+         * keeps this at 90px (it does not drop to the 50px mobile element
+         * default), so it's pinned with an arbitrary value rather than the
+         * `mt-element` token, which would resolve to 50px below md.
+         */
         className={
-          'mx-auto mt-element grid max-w-7xl ' +
+          'mx-auto mt-[90px] grid max-w-7xl ' +
           'grid-cols-1 gap-y-14 ' +
           'lg:grid-cols-5 lg:gap-x-10 lg:gap-y-0'
         }
@@ -96,8 +103,13 @@ export function AssetFocus() {
                 style={{ backgroundColor: sector.barColor }}
               />
               <h3
+                /*
+                 * Gap between the colored bar and its label: 30px on mobile,
+                 * 40px (`mt-10`) on desktop, per the mobile vs desktop comps
+                 * ("Padding between bar and text: 30px" on mobile).
+                 */
                 className={
-                  'mt-10 transition-colors duration-150 ' +
+                  'mt-[30px] md:mt-10 transition-colors duration-150 ' +
                   'group-hover:text-accent-green ' +
                   'group-focus-visible:text-accent-green ' +
                   'group-focus-visible:underline ' +

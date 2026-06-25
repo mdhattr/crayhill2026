@@ -98,7 +98,7 @@ export default function SpecialtyFinancePage() {
          * padding (deviation from the 120px standard, same
          * convention used on every sector page intro).
          */}
-        <section className="bg-paper-deep px-6 py-[90px] sm:px-10">
+        <section className="bg-paper-deep px-6 py-[60px] sm:px-10 md:py-[90px]">
           <div
             className={
               'mx-auto grid max-w-7xl grid-cols-1 items-start gap-y-12 ' +
@@ -112,7 +112,9 @@ export default function SpecialtyFinancePage() {
                 aria-hidden="true"
                 loading="lazy"
                 className={
-                  'block w-full ease-out ' +
+                  // Mobile: 225px tall, cropped (mockup "Image height:
+                  // 225px"); natural height on md+.
+                  'block h-[225px] w-full object-cover ease-out md:h-auto ' +
                   'transition-transform duration-700 ' +
                   'group-hover:scale-105 ' +
                   'motion-reduce:!transition-none ' +

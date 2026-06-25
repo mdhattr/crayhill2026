@@ -11,10 +11,14 @@ import { IdeaGenerationTenets } from '@/pages/team/culture/IdeaGenerationTenets'
  *   1. Hero — <section> on --color-paper. Centered H1 "Culture"
  *      in paper-deep over a Body 1 ink subhead, with a wide
  *      rounded-2xl image below. Section uses an asymmetric
- *      `pt-module pb-element` (120/90) because the designer comp
- *      annotates the IMAGE itself as having 90px top/bottom
+ *      `pt-module pb-element` (120/90 desktop) because the designer
+ *      comp annotates the IMAGE itself as having 90px top/bottom
  *      padding — the 90px below the image is the section's bottom
  *      padding, and `mt-element` (90px) provides the 90px above.
+ *      On mobile the comp tightens these: the gap above the image
+ *      ("padding under intro text") is 30px (`mt-[30px]`) and the
+ *      gap below is 50px (the `pb-element` mobile token); top of the
+ *      module is the 60px `pt-module` mobile token.
  *
  *   2. Idea Generation Tenets — see IdeaGenerationTenets.tsx for
  *      the full spec (paper-deep band, 3-icon grid with slide-in
@@ -55,7 +59,7 @@ export default function CulturePage() {
              * rounded-2xl matches the corner radius visible in the
              * comp (~16px).
              */}
-            <div className="group mt-element overflow-hidden rounded-image">
+            <div className="group mt-[30px] overflow-hidden rounded-image md:mt-element">
               <img
                 src="/images/culture-hero.jpg"
                 alt=""

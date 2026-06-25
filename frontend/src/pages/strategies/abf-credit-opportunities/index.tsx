@@ -57,7 +57,7 @@ export default function ABFCreditOpportunitiesPage() {
          * deviation from the module rhythm", not "internal element
          * spacing applied to a module".
          */}
-        <section className="bg-paper-dark px-6 py-[90px] sm:px-10">
+        <section className="bg-paper-dark px-6 py-[60px] sm:px-10 md:py-[90px]">
           <div
             className={
               'mx-auto grid max-w-7xl grid-cols-1 gap-y-12 ' +
@@ -70,15 +70,13 @@ export default function ABFCreditOpportunitiesPage() {
                 alt=""
                 loading="lazy"
                 className={
-                  // On mobile (single-column stack), the image renders at
-                  // its natural aspect (w-full + auto height). On md+
-                  // (2-column layout), h-full + object-cover forces the
-                  // image to fill its grid cell — guarantees the bottom
-                  // of this image aligns with the bottom of the small
-                  // image in the right column, regardless of which side
-                  // dictates the grid row height.
-                  'block w-full ease-out ' +
-                  'md:h-full md:object-cover ' +
+                  // Mobile (single-column stack): fixed 425px tall, cropped
+                  // (object-cover) per the mobile mockup's "1st Image height:
+                  // 425px". On md+ (2-column layout) h-full + object-cover
+                  // forces the image to fill its grid cell so its bottom
+                  // aligns with the small image in the right column.
+                  'block h-[425px] w-full object-cover ease-out ' +
+                  'md:h-full ' +
                   'transition-transform duration-700 ' +
                   'group-hover:scale-105 ' +
                   'motion-reduce:!transition-none ' +
@@ -102,7 +100,9 @@ export default function ABFCreditOpportunitiesPage() {
                   alt=""
                   loading="lazy"
                   className={
-                    'block w-full ease-out ' +
+                    // Mobile: fixed 225px tall, cropped, per the mockup's
+                    // "2nd Image height: 225px"; natural height on md+.
+                    'block h-[225px] w-full object-cover ease-out md:h-auto ' +
                     'transition-transform duration-700 ' +
                     'group-hover:scale-105 ' +
                     'motion-reduce:!transition-none ' +

@@ -103,7 +103,7 @@ export default function MediaPage() {
          * padding (deviation from the 120px module standard, same
          * convention used on every sector page intro).
          */}
-        <section className="bg-paper-deep px-6 py-[90px] sm:px-10">
+        <section className="bg-paper-deep px-6 py-[60px] sm:px-10 md:py-[90px]">
           <div className="mx-auto max-w-7xl">
             <h1 className="sr-only">Media</h1>
 
@@ -114,21 +114,25 @@ export default function MediaPage() {
               }
             >
               <div className="flex flex-col justify-between gap-12">
-                <h3 className="text-white">
+                <h3 className="order-2 text-white md:order-none">
                   Crayhill provides tailored capital solutions backed by
                   royalties, residuals and advances to allow artists,
                   labels, studios and production companies to finance
                   their long-duration assets with predictable cash flows.
                 </h3>
 
-                <div className="group overflow-hidden rounded-image">
+                <div className="group order-1 overflow-hidden rounded-image md:order-none">
                   <img
                     src="/images/sectors-media-hero-1.jpg"
                     alt=""
                     aria-hidden="true"
                     loading="lazy"
                     className={
-                      'block w-full ease-out ' +
+                      // Mobile: 225px tall, cropped (mockup "1st Image
+                      // height: 225px"); natural height on md+. Rendered
+                      // above the text on mobile via the order utilities on
+                      // the wrapper + the sibling h3.
+                      'block h-[225px] w-full object-cover ease-out md:h-auto ' +
                       'transition-transform duration-700 ' +
                       'group-hover:scale-105 ' +
                       'motion-reduce:!transition-none ' +
@@ -145,8 +149,10 @@ export default function MediaPage() {
                   aria-hidden="true"
                   loading="lazy"
                   className={
-                    'block w-full ease-out ' +
-                    'md:h-full md:object-cover ' +
+                    // Mobile: 425px tall, cropped (mockup "2nd Image
+                    // height: 425px"); fills the grid cell on md+.
+                    'block h-[425px] w-full object-cover ease-out ' +
+                    'md:h-full ' +
                     'transition-transform duration-700 ' +
                     'group-hover:scale-105 ' +
                     'motion-reduce:!transition-none ' +

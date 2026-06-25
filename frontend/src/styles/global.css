@@ -222,14 +222,34 @@
  * tree-shakes theme variables that don't back a used utility, which would
  * leave such a token undefined here.
  *
- * TODO(brand): the mobile reductions (72px module / 48px element) are a
- * responsiveness accommodation, not a designer-supplied spec. Confirm the
- * exact mobile rhythm with the designer.
+ * These are the designer's mobile rhythm from the mobile mockups
+ * (Crayhill_Website_Mockups_MOBILE.pdf): every content module annotates
+ * "Module top/bottom padding: 60px", and internal element spacing (image
+ * top/bottom, image↔text, padding below a section headline) annotates 50px.
+ * The token reduction therefore lands every `*-module` / `*-element` utility
+ * on the designer's phone spec without per-page edits. The two deliberate
+ * mobile exceptions the designer called out separately — the homepage Asset
+ * Focus "90px under headline" and the team-roster "30px under intro" — are
+ * handled as per-component responsive overrides (`mt-[90px]` / `mt-[30px]`
+ * below md, `md:mt-element` at desktop), not here.
  */
 @media (max-width: 767px) {
   :root {
-    --spacing-module: 4.5rem;
-    --spacing-element: 3rem;
+    /* 60px — designer mobile module padding (mobile mockups, all pages). */
+    --spacing-module: 3.75rem;
+    /* 50px — designer mobile internal element spacing (mobile mockups). */
+    --spacing-element: 3.125rem;
+  }
+
+  /*
+   * H3 display copy tightens to 28px leading on phones (the mobile mockups
+   * repeatedly annotate H3 "Leading: 28" — homepage intro, Who We Are quote,
+   * sector hero copy, culture copy), vs. the desktop 36px. H3 is a fixed 28px
+   * font, so line-height: 1 == 28px. This rule is intentionally unlayered so
+   * it overrides the @layer base h3 line-height token below this breakpoint.
+   */
+  h3 {
+    line-height: 1;
   }
 }
 
@@ -434,5 +454,46 @@
 
   .careers-prose a:hover {
     color: var(--color-accent-green);
+  }
+
+  /*
+   * Authored (not Markdown) body for the static legal pages — Legal Notice &
+   * Disclosures and Privacy Policy. Same rhythm primitive as news/careers prose
+   * (`> * + *` for the gap between blocks), but the content is hand-written JSX,
+   * so the element styling (H3 section title, H5 all-caps subhead) comes from
+   * the global @layer base heading rules; this block only sets the inter-block
+   * spacing, extra breathing room before each H5 section subhead, list
+   * affordances, and the in-prose link color.
+   *
+   * Designer spec (mockup pages 23-24): Body 1 black; section title H3 black;
+   * subhead H5 black (uppercase via base rule); link color #57A0DD
+   * (--color-accent).
+   */
+  .legal-prose > * + * {
+    margin-top: 1.25rem;
+  }
+
+  /* More space before a section title / numbered section subhead. */
+  .legal-prose h3,
+  .legal-prose h5 {
+    margin-top: 2.5rem;
+  }
+
+  .legal-prose ol {
+    list-style: none;
+    padding-left: 1.5rem;
+  }
+
+  .legal-prose li + li {
+    margin-top: 0.5rem;
+  }
+
+  .legal-prose a {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+
+  .legal-prose a:hover {
+    color: var(--color-accent-strong);
   }
 }

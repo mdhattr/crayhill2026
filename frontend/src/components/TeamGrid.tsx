@@ -40,8 +40,9 @@ export type TeamGridProps = {
  * containing:
  *
  *   1. Centered H1 (paper-deep) + Body 1 subhead (ink), separated
- *      from the cards by `mt-element` (90px) per the designer's
- *      "Padding under intro text" callout.
+ *      from the cards by `mt-element` (90px desktop) per the designer's
+ *      "Padding under intro text" callout — tightened to 30px on mobile
+ *      per the mobile mockup (see the grid className below).
  *
  *   2. Three-up responsive card grid (one column on mobile). Each
  *      card uses the card-link pattern from the homepage News &
@@ -86,9 +87,16 @@ export function TeamGrid({
            * stack into a single column so a slightly tighter
            * gap-y-16 (64px) keeps the page from feeling sparse.
            */
+          /*
+           * Gap between the intro paragraph and the card grid: 30px on
+           * mobile, 90px (`mt-element`) on desktop. The mobile mockup
+           * (Team: Leadership) annotates "Padding under intro text: 30px",
+           * which is tighter than the 50px mobile element default — so the
+           * mobile value is pinned with an arbitrary `mt-[30px]`.
+           */
           className={
-            'mt-element grid grid-cols-1 gap-y-16 ' +
-            'md:grid-cols-3 md:gap-x-10 md:gap-y-20'
+            'mt-[30px] grid grid-cols-1 gap-y-16 ' +
+            'md:mt-element md:grid-cols-3 md:gap-x-10 md:gap-y-20'
           }
         >
           {members.map((member) => (

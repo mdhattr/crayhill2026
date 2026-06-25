@@ -6,7 +6,7 @@ import { Link, NavLink } from 'react-router-dom'
  *
  * Brand spec (from designer):
  *   - Background: --color-paper-dark (#1B2636)
- *   - Top/bottom padding: 90px
+ *   - Top/bottom padding: 90px desktop, 60px mobile (mobile mockup)
  *   - 5 columns on desktop:
  *       1. Logo (white, 175px) + address + (pinned bottom) copyright + legal
  *       2. ABOUT title + 4 links (Who We Are + 3 Strategies as flat siblings)
@@ -166,7 +166,7 @@ const fineLinkClass =
 
 export function Footer() {
   return (
-    <footer className="bg-paper-dark px-6 py-[90px] sm:px-10">
+    <footer className="bg-paper-dark px-6 py-[60px] sm:px-10 md:py-[90px]">
       <div className="grid grid-cols-1 gap-x-10 gap-y-12 md:grid-cols-5">
         {/* Column 1: logo + address (top), copyright + legal (bottom). */}
         <div className="flex h-full flex-col justify-between gap-12">

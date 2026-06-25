@@ -93,27 +93,31 @@ export default function CommercialRealEstatePage() {
          * padding (deviation from the standard 120px module rhythm,
          * same convention used on every sector page's intro).
          */}
-        <section className="bg-paper-deep px-6 py-[90px] sm:px-10">
+        <section className="bg-paper-deep px-6 py-[60px] sm:px-10 md:py-[90px]">
           <div
             className={
               'mx-auto grid max-w-7xl grid-cols-1 items-start gap-y-12 ' +
               'md:grid-cols-[2fr_3fr] md:gap-x-10 md:gap-y-0'
             }
           >
-            <h3 className="text-white">
+            <h3 className="order-2 text-white md:order-none">
               Crayhill provides bespoke warehouse and term loan facilities
               to commercial real estate bridge lenders, owners and
               developers.
             </h3>
 
-            <div className="group overflow-hidden rounded-image">
+            <div className="group order-1 overflow-hidden rounded-image md:order-none">
               <img
                 src="/images/sectors-comm-real-estate-hero.jpg"
                 alt=""
                 aria-hidden="true"
                 loading="lazy"
                 className={
-                  'block w-full ease-out ' +
+                  // Mobile: 225px tall, cropped (mockup "Image height:
+                  // 225px"); natural height on md+. Image leads on mobile
+                  // via order utilities (DOM keeps the H3 first for screen
+                  // readers; the image is decorative).
+                  'block h-[225px] w-full object-cover ease-out md:h-auto ' +
                   'transition-transform duration-700 ' +
                   'group-hover:scale-105 ' +
                   'motion-reduce:!transition-none ' +

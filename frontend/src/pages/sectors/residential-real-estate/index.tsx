@@ -105,7 +105,7 @@ export default function ResidentialRealEstatePage() {
          * padding (deviation from the 120px standard, same
          * convention used on Power & Infrastructure Section 2).
          */}
-        <section className="bg-paper-deep px-6 py-[90px] sm:px-10">
+        <section className="bg-paper-deep px-6 py-[60px] sm:px-10 md:py-[90px]">
           <div className="mx-auto max-w-7xl">
             <h1 className="sr-only">Residential Real Estate</h1>
 
@@ -115,21 +115,25 @@ export default function ResidentialRealEstatePage() {
                 'md:grid-cols-[2fr_3fr] md:gap-x-10 md:gap-y-0'
               }
             >
-              <h3 className="text-white">
+              <h3 className="order-2 text-white md:order-none">
                 Crayhill provides structured capital solutions to finance
                 residential mortgages and real estate, such as
                 securitization warehouse and term loan facilities to
                 homebuilders and mortgage originators.
               </h3>
 
-              <div className="group overflow-hidden rounded-image">
+              <div className="group order-1 overflow-hidden rounded-image md:order-none">
                 <img
                   src="/images/sectors-res-real-estate-hero.jpg"
                   alt=""
                   aria-hidden="true"
                   loading="lazy"
                   className={
-                    'block w-full ease-out ' +
+                    // Mobile: 225px tall, cropped (mockup "Image height:
+                    // 225px"); natural height on md+. Image leads on mobile
+                    // via the order utilities (DOM order keeps the H3 first
+                    // for screen readers; the image is decorative).
+                    'block h-[225px] w-full object-cover ease-out md:h-auto ' +
                     'transition-transform duration-700 ' +
                     'group-hover:scale-105 ' +
                     'motion-reduce:!transition-none ' +
