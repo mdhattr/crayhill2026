@@ -136,15 +136,15 @@ export default function CareersPage() {
                 </p>
               ) : !postings || postings.length === 0 ? (
                 <p className="text-muted">
-                  There are no open positions at this time. To express
-                  interest, email{' '}
+                  For more information about joining the Crayhill team, please
+                  contact{' '}
                   <a
                     href="mailto:recruiting@crayhill.com"
                     className="text-accent underline hover:text-accent-green"
                   >
                     recruiting@crayhill.com
-                  </a>
-                  .
+                  </a>{' '}
+                  for more information.
                 </p>
               ) : (
                 <ul>
