@@ -27,7 +27,7 @@ function site_page_public(array $row): array
         'title' => (string) $row['title'],
         'subtitle' => $row['subtitle'] !== null ? (string) $row['subtitle'] : null,
         'meta_description' => (string) $row['meta_description'],
-        'content' => (string) $row['content'],
+        'content' => normalize_stored_markdown((string) $row['content']),
     ];
 }
 
@@ -41,7 +41,7 @@ function site_page_admin_detail(array $row): array
         'subtitle' => $row['subtitle'] !== null ? (string) $row['subtitle'] : null,
         'meta_description' => (string) $row['meta_description'],
         'status' => (string) $row['status'],
-        'content' => (string) $row['content'],
+        'content' => normalize_stored_markdown((string) $row['content']),
         'updated_at' => (string) $row['updated_at'],
     ];
 }

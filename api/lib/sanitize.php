@@ -170,8 +170,33 @@ function prepare_stored_text(mixed $value): string
     return trim(sanitize_text_field((string) $value));
 }
 
+/**
+ * Decode literal \uXXXX sequences left over from JSON imports that were stored
+ * as text instead of real UTF-8 (e.g. "\u00c9cole" -> "École").
+ */
+function decode_literal_json_unicode_escapes(string $value): string
+{
+    if (!str_contains($value, '\u')) {
+        return $value;
+    }
+
+    $decoded = preg_replace_callback(
+        '/\\\\u([0-9a-fA-F]{4})/',
+        static fn (array $matches): string => mb_chr((int) hexdec($matches[1]), 'UTF-8'),
+        $value,
+    );
+
+    return $decoded ?? $value;
+}
+
+/** Normalize Markdown read from or written to the CMS database. */
+function normalize_stored_markdown(string $value): string
+{
+    return decode_literal_json_unicode_escapes(sanitize_text_field($value));
+}
+
 /** Strip disallowed control characters from Markdown before storage. */
 function prepare_stored_markdown(mixed $value): string
 {
-    return sanitize_text_field((string) $value);
+    return normalize_stored_markdown((string) $value);
 }

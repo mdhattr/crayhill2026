@@ -51,7 +51,7 @@ function team_bio_item(array $row): array
         'linkedinUrl' => isset($row['linkedin_url']) && trim((string) $row['linkedin_url']) !== ''
             ? trim((string) $row['linkedin_url'])
             : null,
-        'content' => (string) $row['content'],
+        'content' => normalize_stored_markdown((string) $row['content']),
         'rosterPath' => team_roster_path($roster),
         'roster' => $roster,
     ];
@@ -81,7 +81,7 @@ function team_admin_detail(array $row): array
 {
     return [
         ...team_admin_list_item($row),
-        'content' => (string) $row['content'],
+        'content' => normalize_stored_markdown((string) $row['content']),
     ];
 }
 

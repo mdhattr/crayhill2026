@@ -46,7 +46,7 @@ function news_list_item(array $row): array
         'author' => (string) $row['author'],
         'date' => (string) $row['published_date'],
         'image' => $row['image'] !== null ? (string) $row['image'] : null,
-        'excerpt' => news_excerpt((string) $row['content']),
+        'excerpt' => news_excerpt(normalize_stored_markdown((string) $row['content'])),
     ];
 }
 
@@ -60,7 +60,7 @@ function news_detail(array $row): array
         'author' => (string) $row['author'],
         'date' => (string) $row['published_date'],
         'image' => $row['image'] !== null ? (string) $row['image'] : null,
-        'content' => (string) $row['content'],
+        'content' => normalize_stored_markdown((string) $row['content']),
     ];
 }
 
@@ -84,7 +84,7 @@ function news_admin_detail(array $row): array
 {
     return [
         ...news_admin_list_item($row),
-        'content' => (string) $row['content'],
+        'content' => normalize_stored_markdown((string) $row['content']),
     ];
 }
 

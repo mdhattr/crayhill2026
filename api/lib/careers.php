@@ -16,7 +16,7 @@ function careers_item(array $row): array
         'slug' => (string) $row['slug'],
         'title' => (string) $row['title'],
         'location' => $row['location'] !== null ? (string) $row['location'] : null,
-        'content' => (string) $row['content'],
+        'content' => normalize_stored_markdown((string) $row['content']),
     ];
 }
 
@@ -39,7 +39,7 @@ function careers_admin_detail(array $row): array
 {
     return [
         ...careers_admin_list_item($row),
-        'content' => (string) $row['content'],
+        'content' => normalize_stored_markdown((string) $row['content']),
     ];
 }
 

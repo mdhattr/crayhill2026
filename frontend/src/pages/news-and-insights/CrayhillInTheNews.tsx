@@ -13,7 +13,7 @@ import { formatDate } from '@/lib/format-date'
  *   - Row title: H4, ink, single line + ellipsis; hover --color-accent-strong.
  *   - Date: Body 3, ink, right-aligned.
  *   - Rows divided by --color-accent-cyan rules, 25px vertical padding.
- *   - "View All" reveals the remaining rows in place; "View Less" collapses
+ *   - "Read More" reveals the remaining rows in place; "View Less" collapses
  *     back to the initial count.
  * Each row is a single click target (the card-link pattern) linking to the
  * article.
@@ -94,7 +94,7 @@ export function CrayhillInTheNews({ articles }: Props) {
             className={toggleButtonClass}
           >
             <CtaChevron />
-            View All
+            Read More
           </button>
         ) : null}
 

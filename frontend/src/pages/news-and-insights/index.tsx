@@ -12,7 +12,7 @@ import { newsAndInsightsMeta } from './meta'
  *   1. White module — "News & Insights" H1 (--color-paper-deep), then the
  *      three most recent published posts as featured image cards.
  *   2. Light-gray module — "Crayhill in the News", the remaining published
- *      posts as a compact list with "View All" / "View Less" toggles.
+ *      posts as a compact list with "Read More" / "View Less" toggles.
  *
  * Data comes from GET /api/v1/news (published posts only, newest first — the
  * API does the filtering and sorting). One fetch drives both modules: the

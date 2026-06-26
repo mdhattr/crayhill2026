@@ -49,7 +49,7 @@ const SUB_SECTORS: ReadonlyArray<KeyItem> = [
  *        Hero zooms on hover (group-hover scale, same pattern as other
  *        strategy pages). 120px module top/bottom padding.
  *
- *   3. Key Asset Types — the shared <KeyItemsList /> block on
+ *   3. Key sub-sectors — the shared <KeyItemsList /> block on
  *      --color-paper-deep.
  *
  *   4. Select Transactions — see SelectTransactions.tsx. New block
@@ -58,7 +58,7 @@ const SUB_SECTORS: ReadonlyArray<KeyItem> = [
  *
  * Per-page behavior (from designer's annotation):
  *   - The Hero Image (Section 2) zooms slightly on hover.
- *   - Key Asset Types rows animate in as they scroll into view.
+ *   - Key sub-sectors rows animate in as they scroll into view.
  *   The Select Transactions image deliberately does NOT zoom — the
  *   designer specifies hover-zoom only for the Hero Image. See
  *   SelectTransactions.tsx for the same note.
@@ -120,7 +120,7 @@ export default function OriginationPlatformsPage() {
           </div>
         </section>
 
-        <KeyItemsList eyebrow="Key Asset Types" items={SUB_SECTORS} />
+        <KeyItemsList eyebrow="Key sub-sectors" items={SUB_SECTORS} />
 
         <SelectTransactions />
       </main>
