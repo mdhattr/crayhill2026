@@ -2,7 +2,7 @@
 
 This is the living install / deploy runbook for the Crayhill rebrand. It grows with the project — every change that adds a dependency, env var, build step, or system requirement updates this file in the same commit.
 
-> **Status (current):** Frontend scaffold (React + Vite + TS + Tailwind v4 + React Router + brand type scale with both fonts live — Montserrat self-hosted via `@fontsource`, New Science via Adobe Fonts / Typekit + global `TopNav`) + PHP API (`GET /api/v1/health`, `GET /api/v1/news`, `GET /api/v1/careers`, `GET /api/v1/team`, `GET /api/v1/pages`) + MariaDB schema `crayhill` on RDS with CMS-backed content domains (news, careers, team, site pages) + designer-delivered brand assets staged in `assets/` and served via Vite's `publicDir`. Public pages and the admin CMS consume DB content via TanStack Query + the typed client in `frontend/src/api/`. The static frontend `dist/` is deployed to an Amazon Linux 2023 EC2 instance and served over plain HTTP by Apache (see "EC2 deployment"). **PHP-FPM + `/api` routing is scripted** (`scripts/setup-api-ec2.sh`) but must be run once on the box — until then Apache's SPA `FallbackResource` serves `index.html` for `/api/v1/*` and those pages show no data. HTTPS (certbot) is still pending.
+> **Status (current):** Frontend scaffold (React + Vite + TS + Tailwind v4 + React Router + brand type scale with both fonts live — Montserrat self-hosted via `@fontsource`, New Science via Adobe Fonts / Typekit + global `TopNav`) + PHP API (`GET /api/v1/health`, `GET /api/v1/news`, `GET /api/v1/careers`, `GET /api/v1/team`, `GET /api/v1/pages`) + MariaDB schema `crayhill` on RDS with CMS-backed content domains (news, careers, team, site pages) + designer-delivered brand assets staged in `assets/` and served via Vite's `publicDir`. Public pages and the admin CMS consume DB content via TanStack Query + the typed client in `frontend/src/api/`. The static frontend `dist/` is deployed to an Amazon Linux 2023 EC2 instance and served over plain HTTP by Apache (see "EC2 deployment"). **PHP-FPM + `/api` routing is scripted** (`scripts/setup-api-ec2.sh`) but must be run once on the box — until then Apache's SPA `FallbackResource` serves `index.html` for `/api/v1/*` and those pages show no data. **HTTPS is pending DNS cutover** — see "DNS cutover and HTTPS (certbot)"; `scripts/setup-ssl-ec2.sh` is ready to run once `crayhill.com` points at the box.
 
 ---
 
@@ -506,8 +506,8 @@ Single source of truth: **`.config/secrets.env`** at the repo root. Format is `K
 
 | Key               | Required by | Secret? | Notes                                                                                  |
 | ----------------- | ----------- | ------- | -------------------------------------------------------------------------------------- |
-| `APP_ENV`         | API (planned) | No      | One of `development`, `staging`, `production`.                                         |
-| `APP_DEBUG`       | API (planned) | No      | `true` locally; **must be `false` in production**.                                     |
+| `APP_ENV`         | API              | No      | One of `development`, `staging`, `production`. Set `production` on EC2 after HTTPS is live so CMS session cookies use `Secure`. |
+| `APP_DEBUG`       | API              | No      | `true` locally; **must be `false` in production**.                                     |
 | `DB_HOST`            | API + migrations | Yes  | RDS endpoint, e.g. `<name>.<id>.<region>.rds.amazonaws.com`.                            |
 | `DB_PORT`            | API + migrations | No   | `3306` for MariaDB/MySQL on RDS.                                                        |
 | `DB_NAME`            | API + migrations | No   | App schema name. Set to `crayhill` after migration `001` has run.                       |
@@ -515,7 +515,7 @@ Single source of truth: **`.config/secrets.env`** at the repo root. Format is `K
 | `DB_PASSWORD`        | API runtime      | Yes  | App user password. Used by the API at runtime AND substituted into migration `002`.     |
 | `DB_ADMIN_USER`      | Migrations only  | Yes  | RDS admin user (e.g. `admin`). **Never** read by runtime code paths.                   |
 | `DB_ADMIN_PASSWORD`  | Migrations only  | Yes  | RDS admin password. In production, prefer to inject via the deploy environment.        |
-| `ALLOWED_ORIGINS`    | API              | No   | Comma-separated list of origins allowed by CORS. Local dev: `http://localhost:5173`.    |
+| `ALLOWED_ORIGINS`    | API              | No   | Comma-separated CORS origins. Local: `http://localhost:5173`. Production (after certbot): `https://www.crayhill.com,https://crayhill.com`. |
 | `CMS_USERNAME`       | API (CMS login)  | Yes  | Operator username for `/admin` sign-in (phase 1; checked by `POST /api/v1/admin/login`). |
 | `CMS_PASS`           | API (CMS login)  | Yes  | Operator password for `/admin` sign-in. Must match the value in `secrets.env` on each environment. |
 
@@ -731,7 +731,7 @@ The two operations below are **already done** in the current dev environment; th
 
 ## EC2 deployment
 
-> **Status (current):** Static frontend is deployed via `npm run deploy` to `/var/www/crayhill`. The PHP API is **not automatic** — run `scripts/setup-api-ec2.sh` once on the box to wire PHP-FPM + Apache so `/api/v1/*` returns JSON from RDS. Until that script runs, News & Insights and Careers show no data (Apache's SPA fallback serves `index.html` for API URLs). HTTPS (certbot) is still pending.
+> **Status (current):** Static frontend is deployed via `npm run deploy` to `/var/www/crayhill`. The PHP API is **not automatic** — run `scripts/setup-api-ec2.sh` once on the box to wire PHP-FPM + Apache so `/api/v1/*` returns JSON from RDS. Until that script runs, News & Insights and Careers show no data (Apache's SPA fallback serves `index.html` for API URLs). HTTPS awaits DNS cutover — see "DNS cutover and HTTPS (certbot)" and `scripts/setup-ssl-ec2.sh`.
 
 The box is **Amazon Linux 2023**. All commands below run **on the EC2 instance** over SSH. On the current box the repo is cloned at `/var/www/crayhill2026` (the path is machine-specific — substitute your own if it differs).
 
@@ -835,10 +835,109 @@ curl -s http://checkip.amazonaws.com   # the instance's public IP
 
 Open `http://<that-IP>/` in a browser.
 
+---
+
+## DNS cutover and HTTPS (certbot)
+
+The site currently previews at the EC2 **public IP** over plain HTTP. A trusted certificate for `crayhill.com` requires the domain owner to point DNS at this instance first — certbot cannot issue a cert for a bare IP.
+
+### Before cutover (you, now)
+
+1. **Optional but recommended:** attach an **Elastic IP** to the instance (EC2 → Elastic IPs → Allocate → Associate) so the address you give the DNS owner never changes on stop/start.
+2. Confirm `scripts/setup-api-ec2.sh` has already run and the site loads at `http://<public-ip>/`.
+3. Keep `APP_ENV=development` in `.config/secrets.env` on the box until HTTPS works — with `production`, CMS admin session cookies require `Secure` and login breaks over HTTP.
+
+### Handoff for the DNS owner
+
+Send the domain/DNS contact **one** of these (replace `<PUBLIC_IP>` with the instance's Elastic IP or public IPv4):
+
+**Option A — `www` subdomain (preferred)**
+
+| Type | Host | Value | TTL |
+|------|------|-------|-----|
+| A | `www` | `<PUBLIC_IP>` | 300 |
+
+Also ask them to redirect `crayhill.com` → `https://www.crayhill.com` at the registrar if apex cannot point at the same IP.
+
+**Option B — apex only**
+
+| Type | Host | Value | TTL |
+|------|------|-------|-----|
+| A | `@` | `<PUBLIC_IP>` | 300 |
+
+Find the public IP on the instance details page (**Public IPv4 address**) or on the box:
+
+```sh
+curl -s http://checkip.amazonaws.com
+```
+
+### After DNS propagates (you, on the EC2 box)
+
+Verify the hostname resolves to this instance:
+
+```sh
+dig +short www.crayhill.com A
+curl -s http://checkip.amazonaws.com
+```
+
+Then run the one-time SSL script (committed at `scripts/setup-ssl-ec2.sh`):
+
+```sh
+CERTBOT_EMAIL=ops@example.com bash /var/www/crayhill2026/scripts/setup-ssl-ec2.sh
+```
+
+The script:
+
+1. Confirms DNS for `www.crayhill.com` (override mismatch with `CERTBOT_FORCE=1` if propagation is still in flight).
+2. Installs `certbot`, `mod_ssl`, and requests a Let's Encrypt cert for `www.crayhill.com` and `crayhill.com` via webroot (`/var/www/crayhill`).
+3. Installs `config/httpd/crayhill-ssl.conf` as `/etc/httpd/conf.d/crayhill-ssl.conf` — same SPA + `/api` routing as port 80, with TLS.
+
+**Security group:** open inbound **HTTPS (443)** from `0.0.0.0/0` (or your allowlist).
+
+**Secrets on the box** — edit `/var/www/crayhill2026/.config/secrets.env`:
+
+```env
+APP_ENV=production
+APP_DEBUG=false
+ALLOWED_ORIGINS=https://www.crayhill.com,https://crayhill.com
+```
+
+```sh
+sudo systemctl reload php-fpm
+```
+
+**Smoke test:**
+
+```sh
+curl -sI https://www.crayhill.com/ | head -5
+curl -s https://www.crayhill.com/api/v1/health | head -c 120
+```
+
+Log in at `https://www.crayhill.com/admin` and confirm the session persists after refresh.
+
+**HTTP → HTTPS redirect:** leave port 80 serving the site until HTTPS is verified. The redirect snippet below can be added to the `:80` `<VirtualHost>` in `/etc/httpd/conf.d/crayhill.conf` afterward. It skips `/.well-known/acme-challenge/` so certbot renewals keep working:
+
+```apache
+    RewriteEngine On
+    RewriteCond %{HTTP_HOST} !^[0-9.+\-a-f:]+$ 
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+```
+
+(`RewriteCond` skips redirect when the Host is a raw IP, so `http://<ip>/` preview still works.)
+
+**Re-run `setup-api-ec2.sh` safely** after pulling vhost changes — it refreshes the port-80 config only. Re-run `setup-ssl-ec2.sh` if the HTTPS vhost template changes.
+
+Certbot auto-renewal: `sudo systemctl status certbot-renew.timer` (Amazon Linux 2023 package).
+
+---
+
 ### Log locations
 
 - Access log: `/var/log/httpd/crayhill_access.log`
 - Error log: `/var/log/httpd/crayhill_error.log`
+- HTTPS access log (after certbot): `/var/log/httpd/crayhill_ssl_access.log`
+- HTTPS error log (after certbot): `/var/log/httpd/crayhill_ssl_error.log`
 - Service status / restart: `sudo systemctl status httpd`, `sudo systemctl reload httpd`
 
 ---
@@ -867,6 +966,7 @@ Ordered steps for the very first deploy onto a fresh Amazon Linux 2023 EC2 box. 
 7. Disable `welcome.conf` if the Apache test page shows instead of the site.
 8. Open inbound port 80 in the instance's security group.
 9. Smoke test (`curl http://localhost/` and `curl http://localhost/api/v1/health`) and confirm in a browser at `http://<public-ip>/`.
+10. When the DNS owner points `www.crayhill.com` at the box, follow **DNS cutover and HTTPS (certbot)**.
 
 ---
 

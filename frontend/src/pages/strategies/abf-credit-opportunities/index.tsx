@@ -20,7 +20,7 @@ import { abfCreditOpportunitiesMeta } from '@/pages/strategies/abf-credit-opport
  *      WhoWeArePage for the rationale on using group-hover rather than
  *      img:hover for clip-safe enlargement). 90px top + bottom padding.
  *
- *   3. Key Asset Types — the shared <KeyItemsList /> block, fed with
+ *   3. Key sub-sectors — the shared <KeyItemsList /> block, fed with
  *      the canonical SECTORS list. The eyebrow text is the only
  *      strategy-specific bit.
  *
@@ -115,7 +115,7 @@ export default function ABFCreditOpportunitiesPage() {
         </section>
 
         <KeyItemsList
-          eyebrow="Key Asset Types"
+          eyebrow="Key sub-sectors"
           items={SECTORS}
           linked
         />
