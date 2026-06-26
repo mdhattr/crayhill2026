@@ -61,7 +61,7 @@ export default function CulturePage() {
              */}
             <div className="group mt-[30px] overflow-hidden rounded-image md:mt-element">
               <img
-                src="/images/culture-hero.jpg"
+                src="/images/Culture_Hero-2.jpg"
                 alt=""
                 aria-hidden="true"
                 loading="lazy"
