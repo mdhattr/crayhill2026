@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
+import { useCareersPageStatus } from '@/api/careers'
 
 /**
  * Primary site navigation. Rendered by RootLayout so it appears on every
@@ -185,6 +186,26 @@ const NAV_ITEMS: ReadonlyArray<NavItem> = [
     external: true,
   },
 ]
+
+function navItemsForCareersVisibility(
+  showCareers: boolean,
+): ReadonlyArray<NavItem> {
+  if (showCareers) {
+    return NAV_ITEMS
+  }
+
+  return NAV_ITEMS.map((item) => {
+    if (item.kind === 'disclosure' && item.label === 'Team') {
+      return {
+        ...item,
+        children: item.children.filter(
+          (child) => child.kind !== 'link' || child.to !== '/careers',
+        ),
+      }
+    }
+    return item
+  })
+}
 
 // ---------------------------------------------------------------------------
 // Hover-capability detection
@@ -660,6 +681,12 @@ export function TopNav() {
   const headerRef = useRef<HTMLElement>(null)
   const mobilePanelId = useId()
   const { pathname } = useLocation()
+  const { data: careersStatus } = useCareersPageStatus()
+  const showCareers = careersStatus?.active ?? true
+  const navItems = useMemo(
+    () => navItemsForCareersVisibility(showCareers),
+    [showCareers],
+  )
 
   const closeAll = () => {
     setOpenMenu(null)
@@ -723,7 +750,7 @@ export function TopNav() {
         {/* Desktop nav — hover/flyout model, shown at lg and up. */}
         <nav aria-label="Primary" className="hidden lg:block">
           <ul className="flex items-center gap-10">
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               if (item.kind === 'link') {
                 return (
                   <li key={item.to}>
@@ -796,7 +823,7 @@ export function TopNav() {
         >
           <nav aria-label="Primary">
             <ul>
-              {NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <MobileNavItem
                   key={item.kind === 'link' ? item.to : item.label}
                   item={item}

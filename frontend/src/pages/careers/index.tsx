@@ -1,8 +1,9 @@
 import { useId, useState } from 'react'
-import { useCareersList } from '@/api/careers'
+import { useCareersList, useCareersPageStatus } from '@/api/careers'
 import type { CareerPosting } from '@/api/types/careers'
 import { CareersMarkdownBody } from '@/components/CareersMarkdownBody'
 import { PageHead } from '@/components/PageHead'
+import NotFoundPage from '@/pages/not-found'
 import { careersMeta } from '@/pages/careers/meta'
 
 /**
@@ -87,7 +88,15 @@ function PostingRow({ posting }: { posting: CareerPosting }) {
 }
 
 export default function CareersPage() {
-  const { data: postings, isPending, isError } = useCareersList()
+  const { data: pageStatus, isPending: statusPending } = useCareersPageStatus()
+  const pageActive = pageStatus?.active ?? true
+  const { data: postings, isPending, isError } = useCareersList({
+    enabled: pageActive,
+  })
+
+  if (!statusPending && !pageActive) {
+    return <NotFoundPage />
+  }
 
   return (
     <>

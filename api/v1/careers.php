@@ -6,6 +6,7 @@ require_once __DIR__ . '/../lib/env.php';
 require_once __DIR__ . '/../lib/response.php';
 require_once __DIR__ . '/../lib/db.php';
 require_once __DIR__ . '/../lib/careers.php';
+require_once __DIR__ . '/../lib/site_settings.php';
 
 /**
  * GET /api/v1/careers  -> list of published job postings, in display order.
@@ -33,6 +34,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
 
 try {
     $pdo = db();
+
+    if (!careers_page_is_active($pdo)) {
+        respond_error('NOT_FOUND', 'Careers page is not available.', 404);
+    }
 
     $stmt = $pdo->prepare(
         'SELECT id, slug, title, location, content

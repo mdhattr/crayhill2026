@@ -552,6 +552,7 @@ api/migrations/
 ├── 2026_04_28_002_create_app_user.sql       # creates crayhill_app, REQUIRE SSL, least privileges
 ├── 2026_06_24_003_create_news.sql           # creates the news table (News & Insights)
 └── 2026_06_24_004_create_careers.sql        # creates the careers table (Careers)
+└── 2026_06_29_007_create_site_settings.sql  # CMS site flags (Careers page active)
 ```
 
 Charset/collation: `utf8mb4 / utf8mb4_unicode_ci`.

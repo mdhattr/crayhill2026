@@ -1,4 +1,7 @@
+import { useMemo } from 'react'
 import { Link, NavLink } from 'react-router-dom'
+import { useCareersPageStatus } from '@/api/careers'
+import { filterCareersLinks } from '@/lib/careers-nav'
 
 /**
  * Global site footer. Rendered by RootLayout below the page outlet so it
@@ -187,6 +190,24 @@ function FooterLegal({ className = '' }: { className?: string }) {
 // ---------------------------------------------------------------------------
 
 export function Footer() {
+  const { data: careersStatus } = useCareersPageStatus()
+  const showCareers = careersStatus?.active ?? true
+  const footerColumns = useMemo(
+    () =>
+      FOOTER_COLUMNS.map((column) =>
+        column.map((block) => {
+          if (block.title !== 'Team' || !block.items) {
+            return block
+          }
+          return {
+            ...block,
+            items: filterCareersLinks(block.items, showCareers),
+          }
+        }),
+      ),
+    [showCareers],
+  )
+
   return (
     <footer className="bg-paper-dark px-6 py-[60px] sm:px-10 md:py-[90px]">
       <div className="grid grid-cols-1 gap-x-10 gap-y-12 md:grid-cols-5">
@@ -212,7 +233,7 @@ export function Footer() {
         </div>
 
         {/* Columns 2-5: title blocks + optional item lists. */}
-        {FOOTER_COLUMNS.map((column, columnIndex) => {
+        {footerColumns.map((column, columnIndex) => {
           const isLastColumn = columnIndex === FOOTER_COLUMNS.length - 1
           return (
             <div

@@ -37,3 +37,8 @@ export type AdminCareersDeleteResult = {
   deleted: true
   id: number
 }
+
+/** Careers page visibility toggle. Mirrors api/v1/admin/careers-page.php. */
+export type AdminCareersPageSettings = {
+  pageActive: boolean
+}

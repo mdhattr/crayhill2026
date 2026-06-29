@@ -26,7 +26,7 @@ Boundaries (from `.cursor/rules/00-project.mdc`): the SPA talks to the backend o
 | Domain | Current source | Target source | Migration trigger |
 |---|---|---|---|
 | News & Insights | **`news` table on RDS.** Public reads via `GET /api/v1/news`; CMS writes via authenticated `/api/v1/admin/news` (list, create, edit, status toggle, permanent delete). | Same table with admin image uploads and audit trail **[planned]** | When image upload + audit ship |
-| Careers | **`careers` table on RDS.** Public reads via `GET /api/v1/careers`; CMS writes via authenticated `/api/v1/admin/careers` (list, create, edit, status toggle, permanent delete). | Same table with audit trail **[planned]** | When audit trail ships |
+| Careers | **`careers` table on RDS** plus **`site_settings.careers_page_active`** for page visibility. Public reads via `GET /api/v1/careers` (404 when page inactive) and `GET /api/v1/careers/status`; CMS writes via `/api/v1/admin/careers` and `/api/v1/admin/careers-page`. | Same tables with audit trail **[planned]** | When audit trail ships |
 | Team | **`team_members` table on RDS.** Public reads via `GET /api/v1/team?roster=<roster>` (grid) and `GET /api/v1/team?roster=<roster>&slug=<x>` (bio); CMS writes via authenticated `/api/v1/admin/team` (separate list pages for Leadership and Senior Investment Professionals). | Same table with headshot upload + audit trail **[planned]** | When media library ships |
 | Sectors | Hardcoded in [frontend/src/data/sectors.ts](../frontend/src/data/sectors.ts) | TBD - may stay static | Undecided |
 | Page copy (legal / privacy) | **`site_pages` table on RDS.** Public reads via `GET /api/v1/pages?slug=<x>`; CMS edits via `/api/v1/admin/pages` (edit-only for provisioned slugs). | Same table with audit trail **[planned]** | When audit trail ships |
@@ -124,9 +124,11 @@ flowchart LR
   client -->|"useCareersList"| page
 ```
 
-- **Endpoint:** [api/v1/careers.php](../api/v1/careers.php) — list only (`/api/v1/careers`). Returns only `status = 'published'` and `deleted_at IS NULL` rows, ordered `sort_order ASC, id ASC`, with the full Markdown `content` inline. Shaped into the standard envelope; never raw rows.
-- **Client:** [frontend/src/api/careers.ts](../frontend/src/api/careers.ts) exposes `useCareersList()` over the typed fetch wrapper in [frontend/src/api/client.ts](../frontend/src/api/client.ts). Response types live in [frontend/src/api/types/careers.ts](../frontend/src/api/types/careers.ts) and mirror the PHP contract.
-- **Page:** [frontend/src/pages/careers/](../frontend/src/pages/careers/) — each posting is an accordion row; the title toggles its body open in place (rendered Markdown via `react-markdown` + `remark-gfm`). Per the designer spec, an expanded row turns the title + caret brand blue (`--color-accent`, `#57A0DD`) and rotates the caret. The nav and footer "Careers" links point at `/careers` (previously the dead `/team/careers`).
+- **Endpoint:** [api/v1/careers.php](../api/v1/careers.php) — list only (`/api/v1/careers`). Returns **404** when `site_settings.careers_page_active` is off. Otherwise returns only `status = 'published'` and `deleted_at IS NULL` rows, ordered `sort_order ASC, id ASC`, with the full Markdown `content` inline.
+- **Page visibility:** [api/v1/careers/status.php](../api/v1/careers/status.php) — `GET /api/v1/careers/status` returns `{ active: boolean }` (always 200). TopNav, Footer, and the Careers page consume this via `useCareersPageStatus()`. When inactive, `/careers` renders the site 404 and Careers links are omitted from nav.
+- **CMS toggle:** [api/v1/admin/careers-page.php](../api/v1/admin/careers-page.php) — `GET` / `PATCH` `{ pageActive: boolean }`, authenticated. UI on [frontend/src/pages/admin/careers/index.tsx](../frontend/src/pages/admin/careers/index.tsx).
+- **Client:** [frontend/src/api/careers.ts](../frontend/src/api/careers.ts) exposes `useCareersList()` and `useCareersPageStatus()` over the typed fetch wrapper in [frontend/src/api/client.ts](../frontend/src/api/client.ts). Response types live in [frontend/src/api/types/careers.ts](../frontend/src/api/types/careers.ts) and mirror the PHP contract.
+- **Page:** [frontend/src/pages/careers/](../frontend/src/pages/careers/) — each posting is an accordion row; the title toggles its body open in place (rendered Markdown via `react-markdown` + `remark-gfm`). Per the designer spec, an expanded row turns the title + caret brand blue (`--color-accent`, `#57A0DD`) and rotates the caret. The nav and footer "Careers" links point at `/careers` when the page is active.
 
 ### Provenance (historical)
 
@@ -149,6 +151,10 @@ Defined by migration [api/migrations/2026_06_24_004_create_careers.sql](../api/m
 | `deleted_at` | `TIMESTAMP` NULL | Soft delete per `.cursor/rules/20-php-api.mdc`. |
 
 Indexes: `UNIQUE (slug)`; `(status, sort_order)` backs the "list published postings, in order" query.
+
+### `site_settings` (Careers page visibility)
+
+Defined by migration [api/migrations/2026_06_29_007_create_site_settings.sql](../api/migrations/2026_06_29_007_create_site_settings.sql). Key `careers_page_active` (`'1'` / `'0'`) controls whether the public Careers page and nav links are live. Defaults to `'1'` (active).
 
 ### API contract (live)
 

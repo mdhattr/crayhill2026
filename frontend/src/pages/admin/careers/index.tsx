@@ -2,7 +2,9 @@ import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   useAdminCareersList,
+  useAdminCareersPageSettings,
   useDeleteAdminCareersPosting,
+  useUpdateAdminCareersPageSettings,
   useUpdateAdminCareersPosting,
 } from '@/api/admin-careers'
 import { ApiError } from '@/api/client'
@@ -119,6 +121,82 @@ function DeleteButton({ posting }: { posting: AdminCareersListItem }) {
   )
 }
 
+function CareersPageActiveToggle() {
+  const { data: settings, isPending } = useAdminCareersPageSettings()
+  const updateSettings = useUpdateAdminCareersPageSettings()
+  const [error, setError] = useState<string | null>(null)
+
+  const pageActive = settings?.pageActive ?? true
+  const toggleId = 'careers-page-active'
+
+  async function handleToggle() {
+    setError(null)
+    try {
+      await updateSettings.mutateAsync(!pageActive)
+    } catch (cause) {
+      setError(
+        cause instanceof ApiError
+          ? cause.message
+          : 'Unable to update Careers page visibility. Try again.',
+      )
+    }
+  }
+
+  return (
+    <div className="mt-element rounded border border-rule bg-paper px-6 py-5">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-body-1 font-semibold text-paper-deep">
+            Careers page on site
+          </h2>
+          <p className="mt-2 max-w-2xl text-body-2 text-ink">
+            When inactive, <code className="text-body-3">/careers</code> returns
+            a 404 and Careers is removed from the top and bottom navigation.
+            Individual job postings below are unaffected.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <label
+            htmlFor={toggleId}
+            className="text-body-2 text-ink"
+          >
+            {pageActive ? 'Active' : 'Inactive'}
+          </label>
+          <button
+            id={toggleId}
+            type="button"
+            role="switch"
+            aria-checked={pageActive}
+            disabled={isPending || updateSettings.isPending}
+            onClick={() => void handleToggle()}
+            className={
+              'relative h-8 w-14 shrink-0 rounded-full border transition-colors duration-150 ' +
+              'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ' +
+              'focus-visible:outline-accent disabled:opacity-60 ' +
+              (pageActive
+                ? 'border-accent bg-accent'
+                : 'border-rule bg-paper-alt')
+            }
+          >
+            <span
+              aria-hidden="true"
+              className={
+                'absolute top-0.5 block h-6 w-6 rounded-full bg-paper shadow transition-transform duration-150 ' +
+                (pageActive ? 'translate-x-7' : 'translate-x-1')
+              }
+            />
+          </button>
+        </div>
+      </div>
+      {error ? (
+        <p className="mt-3 text-body-3 text-accent-navy" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
 /** CMS careers list — all postings with status, edit, and delete controls. */
 export default function AdminCareersPage() {
   const { data: postings, isPending, isError, error } = useAdminCareersList()
@@ -171,6 +249,8 @@ export default function AdminCareersPage() {
               Create new
             </Link>
           </div>
+
+          <CareersPageActiveToggle />
 
           {isPending ? (
             <p className="mt-element text-body-1 text-muted" role="status">

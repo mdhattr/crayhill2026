@@ -14,3 +14,8 @@ export type CareerPosting = {
   /** Full posting body as Markdown. */
   content: string
 }
+
+/** Public Careers page visibility. Mirrors GET /api/v1/careers/status. */
+export type CareersPageStatus = {
+  active: boolean
+}
