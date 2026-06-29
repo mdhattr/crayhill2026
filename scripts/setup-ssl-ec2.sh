@@ -113,6 +113,7 @@ if [ -f "$DEFAULT_SSL" ] && ! sudo test -s /etc/pki/tls/certs/localhost.crt 2>/d
   if [ ! -f "${DEFAULT_SSL}.disabled" ]; then
     echo "==> disabling default Apache ssl.conf (missing localhost.crt)"
     sudo mv "$DEFAULT_SSL" "${DEFAULT_SSL}.disabled"
+    echo "    (Listen 443 is in crayhill-ssl.conf — required after disabling ssl.conf)"
   fi
 fi
 

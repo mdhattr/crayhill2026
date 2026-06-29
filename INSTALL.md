@@ -1021,7 +1021,12 @@ Then re-run the smoke test and confirm in a browser. Apache config (`crayhill.co
   sudo apachectl configtest
   sudo systemctl reload httpd
   ```
-  Latest `scripts/setup-ssl-ec2.sh` does this automatically on re-run.
+  Latest `scripts/setup-ssl-ec2.sh` does this automatically on re-run. **Important:** disabling `ssl.conf` also removes `Listen 443` — `config/httpd/crayhill-ssl.conf` includes `Listen 443 https`. If HTTPS still hangs and `ss -tlnp | grep ':443'` is empty, re-install the vhost from a current repo pull or run:
+  ```sh
+  echo 'Listen 443 https' | sudo tee /etc/httpd/conf.d/crayhill-listen-443.conf
+  sudo systemctl reload httpd
+  ```
+  Then confirm port **443** is open in the EC2 security group.
 - **`Failed to fetch dynamically imported module` / `edit-*.js` on EC2 after a deploy.** The browser is loading a **stale JavaScript chunk** from before the last `npm run deploy`. Each build hashes filenames (`edit-Dci8gSFU.js`, etc.); an old tab or cached bundle still requests the previous hash. Apache was also returning `index.html` (HTML) for missing `/assets/*` URLs, which breaks `import()`.
   1. **Immediate fix:** hard refresh the page (`Cmd+Shift+R` / `Ctrl+Shift+R`) or open the site in a private window.
   2. **Permanent fix (code):** pull latest, redeploy, and re-apply the vhost so `index.html` is `no-cache` and missing `/assets/*` returns 404 instead of HTML:
