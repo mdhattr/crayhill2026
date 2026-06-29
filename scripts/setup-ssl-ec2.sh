@@ -105,6 +105,17 @@ sed -e "s|@CRAYHILL_REPO@|$CRAYHILL_REPO|g" \
     -e "s|@CERT_NAME@|$CERT_PRIMARY|g" \
     "$SSL_CONF_SRC" | sudo tee "$SSL_CONF_DEST" >/dev/null
 
+# Amazon Linux httpd ships ssl.conf with a default :443 vhost that points at
+# /etc/pki/tls/certs/localhost.crt, which is often missing. That breaks
+# apachectl configtest even when our crayhill-ssl.conf is valid.
+DEFAULT_SSL="/etc/httpd/conf.d/ssl.conf"
+if [ -f "$DEFAULT_SSL" ] && ! sudo test -s /etc/pki/tls/certs/localhost.crt 2>/dev/null; then
+  if [ ! -f "${DEFAULT_SSL}.disabled" ]; then
+    echo "==> disabling default Apache ssl.conf (missing localhost.crt)"
+    sudo mv "$DEFAULT_SSL" "${DEFAULT_SSL}.disabled"
+  fi
+fi
+
 echo "==> validating Apache config"
 sudo apachectl configtest
 

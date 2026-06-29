@@ -890,7 +890,7 @@ The script:
 
 1. Confirms DNS for `www.crayhill.com` (override mismatch with `CERTBOT_FORCE=1` if propagation is still in flight).
 2. Installs `certbot`, `mod_ssl`, and requests a Let's Encrypt cert for `www.crayhill.com` and `crayhill.com` via webroot (`/var/www/crayhill`).
-3. Installs `config/httpd/crayhill-ssl.conf` as `/etc/httpd/conf.d/crayhill-ssl.conf` — same SPA + `/api` routing as port 80, with TLS.
+3. Installs `config/httpd/crayhill-ssl.conf` as `/etc/httpd/conf.d/crayhill-ssl.conf` — same SPA + `/api` routing as port 80, with TLS. Disables the stock `/etc/httpd/conf.d/ssl.conf` if its default `localhost.crt` is missing (common on Amazon Linux 2023).
 
 **Security group:** open inbound **HTTPS (443)** from `0.0.0.0/0` (or your allowlist).
 
@@ -1015,6 +1015,13 @@ Then re-run the smoke test and confirm in a browser. Apache config (`crayhill.co
 
 > Add an entry here every time we hit a real failure mode and figure out the fix.
 
+- **`setup-ssl-ec2.sh`: certbot succeeds but `apachectl configtest` fails with `SSLCertificateFile: file '/etc/pki/tls/certs/localhost.crt' does not exist`.** Amazon Linux's default `/etc/httpd/conf.d/ssl.conf` defines a stock `:443` vhost that references a self-signed cert that was never created. Your Let's Encrypt cert and `crayhill-ssl.conf` are fine — disable the default file and reload:
+  ```sh
+  sudo mv /etc/httpd/conf.d/ssl.conf /etc/httpd/conf.d/ssl.conf.disabled
+  sudo apachectl configtest
+  sudo systemctl reload httpd
+  ```
+  Latest `scripts/setup-ssl-ec2.sh` does this automatically on re-run.
 - **`Failed to fetch dynamically imported module` / `edit-*.js` on EC2 after a deploy.** The browser is loading a **stale JavaScript chunk** from before the last `npm run deploy`. Each build hashes filenames (`edit-Dci8gSFU.js`, etc.); an old tab or cached bundle still requests the previous hash. Apache was also returning `index.html` (HTML) for missing `/assets/*` URLs, which breaks `import()`.
   1. **Immediate fix:** hard refresh the page (`Cmd+Shift+R` / `Ctrl+Shift+R`) or open the site in a private window.
   2. **Permanent fix (code):** pull latest, redeploy, and re-apply the vhost so `index.html` is `no-cache` and missing `/assets/*` returns 404 instead of HTML:
