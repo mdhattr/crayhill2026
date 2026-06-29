@@ -37,14 +37,40 @@ if [ -z "$CERTBOT_EMAIL" ]; then
   exit 1
 fi
 
+# Follow CNAME chains (e.g. www.crayhill.com -> crayhill.com -> A record).
+resolve_ipv4() {
+  local host="${1%.}"
+  local ip cname
+
+  ip="$(dig +short "$host" A 2>/dev/null | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)"
+  if [ -n "$ip" ]; then
+    echo "$ip"
+    return 0
+  fi
+
+  cname="$(dig +short "$host" CNAME 2>/dev/null | head -1 | sed 's/\.$//' || true)"
+  if [ -n "$cname" ]; then
+    resolve_ipv4 "$cname"
+    return $?
+  fi
+
+  ip="$(dig +short "$host" 2>/dev/null | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | tail -1 || true)"
+  if [ -n "$ip" ]; then
+    echo "$ip"
+    return 0
+  fi
+
+  return 1
+}
+
 echo "==> checking DNS for $CERT_PRIMARY"
-RESOLVED="$(dig +short "$CERT_PRIMARY" A | head -1 || true)"
+RESOLVED="$(resolve_ipv4 "$CERT_PRIMARY" || true)"
 if [ -z "$RESOLVED" ]; then
-  echo "ERROR: $CERT_PRIMARY does not resolve. Ask the DNS owner to add an A record" >&2
-  echo "pointing at this instance's public IP before running certbot." >&2
+  echo "ERROR: $CERT_PRIMARY does not resolve to an IPv4 address." >&2
+  echo "Ask the DNS owner to point crayhill.com (or www) at this instance's public IP." >&2
   exit 1
 fi
-echo "    $CERT_PRIMARY -> $RESOLVED"
+echo "    $CERT_PRIMARY -> $RESOLVED (IPv4)"
 
 PUBLIC_IP="$(curl -s --max-time 5 http://checkip.amazonaws.com || true)"
 if [ -n "$PUBLIC_IP" ] && [ "$RESOLVED" != "$PUBLIC_IP" ] && [ "${CERTBOT_FORCE:-}" != "1" ]; then
